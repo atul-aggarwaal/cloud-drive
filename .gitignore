@@ -1,0 +1,37 @@
+# Compiled Binaries
+dist/
+bin/
+backend/cmd/server/server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dyLib
+
+#Local IDEs and OS junk
+.idea/
+.vscode/
+.DS_Store
+
+#GO Dependencies & coverage
+vendor/
+*.out
+
+#Local Infrastructure Data
+.localstack/
+*.log
+*.env
+
+#Frontend directory
+frontend/
+
+#Frontend Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+
+#Frontend Builds
+dist/
+.svelte-kit/
+.next/
+.nuxt/
