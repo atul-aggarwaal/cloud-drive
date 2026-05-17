@@ -5,9 +5,10 @@ import (
 	"time"
 )
 
-// BlobStorage defines the contract for our storage layer
+// BlobStorage defines the contract for any blob storage implementation.
 type BlobStorage interface {
-	// creates a temporary, secure URL for the client to upload a file directly
+
+	// GenerateUploadUrl creates a temporary, secure URL for the client to upload a file directly
 	GenerateUploadUrl(ctx context.Context, key string, expireIn time.Duration) (string, error)
 
 	//TODO : support for Download URL

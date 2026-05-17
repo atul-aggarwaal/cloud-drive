@@ -18,6 +18,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// main is the entry point of the server application.
+// It sets up the database connection, AWS configuration,
+// initializes the layers, and starts the HTTP server.
 func main() {
 	ctx := context.Background()
 

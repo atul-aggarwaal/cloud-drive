@@ -7,14 +7,17 @@ import (
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
 )
 
+// FileHandler handles HTTP requests related to files.
 type FileHandler struct {
 	service *usecase.FileService
 }
 
+// NewFileHandler creates a new instance of FileHandler.
 func NewFileHandler(service *usecase.FileService) *FileHandler {
 	return &FileHandler{service: service}
 }
 
+// InitiateUploadRequest represents the request payload for initiating a file upload.
 /*
 Sample request
 
@@ -30,6 +33,9 @@ type InitiateUploadRequest struct {
 	UserId   string `json:"user_id"` // In real app this comes from a JWT token
 }
 
+// HandleInitiateUpload handles the request to initiate a file upload.
+// It decodes the request body, calls the service to initiate the upload,
+// and sends back the response with the file metadata and the presigned upload URL.
 func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, request *http.Request) {
 	//1. verify HTTP method (only POST allowed)
 

@@ -8,17 +8,18 @@ import (
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 )
 
-// PotgresFileRepository implements the domain.FileRepository interface
+// PostgresFileRepository implements the domain.FileRepository interface
+// using a PostgreSQL database.
 type PostgresFileRepository struct {
 	db *sql.DB
 }
 
-// NewPostgresFileRepository is the constructor
+// NewPostresFileRepository creates a new instance of PostgresFileRepository.
 func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 	return &PostgresFileRepository{db: db}
 }
 
-// Save inserts a new file record into the database
+// Save inserts a new file record into the database.
 func (this *PostgresFileRepository) Save(ctx context.Context, file *domain.File) error {
 	query := `INSERT INTO files(id, user_id, file_name, size, status, created_at)
 		VALUES($1, $2, $3, $4, $5, $6)`
@@ -27,7 +28,8 @@ func (this *PostgresFileRepository) Save(ctx context.Context, file *domain.File)
 	return err
 }
 
-// GetByID retrieves a file record by its ID
+// GetByID retrieves a file record by its ID from the database.
+// Returns nil, nil if the file is not found.
 func (this *PostgresFileRepository) GetByID(ctx context.Context, id string) (*domain.File, error) {
 	query := `SELECT id, user_id, file_name, size, status, created_at from files WHERE id = $1`
 

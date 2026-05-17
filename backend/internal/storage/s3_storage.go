@@ -9,13 +9,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// s3Storage implements domain.BlobStorage
+// S3Storage implements domain.BlobStorage using AWS S3.
 type S3Storage struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
 	bucketName    string
 }
 
+// NewS3Storage creates a new instance of S3Storage.
 func NewS3Storage(cfg aws.Config, bucketName string, endpoint string) *S3Storage {
 	client := s3.NewFromConfig(cfg, func(options *s3.Options) {
 		// This is the non-deprecated, modern way to point to LocalStack
@@ -32,6 +33,7 @@ func NewS3Storage(cfg aws.Config, bucketName string, endpoint string) *S3Storage
 	}
 }
 
+// GenerateUploadUrl creates a presigned URL that can be used to upload an object to S3.
 func (this *S3Storage) GenerateUploadUrl(ctx context.Context, key string, expireIn time.Duration) (string, error) {
 	request, err := this.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(this.bucketName),
