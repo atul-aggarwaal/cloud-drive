@@ -20,20 +20,28 @@ func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 }
 
 // Save inserts a new file record into the database.
-func (this *PostgresFileRepository) Save(ctx context.Context, file *domain.File) error {
+func (r *PostgresFileRepository) Save(ctx context.Context, file *domain.File) error {
 	query := `INSERT INTO files(id, user_id, file_name, size, status, created_at)
 		VALUES($1, $2, $3, $4, $5, $6)`
-	_, err := this.db.ExecContext(ctx, query, file.ID, file.UserID, file.FileName, file.Size, file.Status, file.CreatedAt)
+	_, err := r.db.ExecContext(ctx, query, file.ID, file.UserID, file.FileName, file.Size, file.Status, file.CreatedAt)
+
+	return err
+}
+
+// UpdateStatus updates the upload status of a file.
+func (r *PostgresFileRepository) UpdateStatus(ctx context.Context, id string, status string) error {
+	query := `UPDATE files SET status = $1 WHERE id = $2`
+	_, err := r.db.ExecContext(ctx, query, status, id)
 
 	return err
 }
 
 // GetByID retrieves a file record by its ID from the database.
 // Returns nil, nil if the file is not found.
-func (this *PostgresFileRepository) GetByID(ctx context.Context, id string) (*domain.File, error) {
+func (r *PostgresFileRepository) GetByID(ctx context.Context, id string) (*domain.File, error) {
 	query := `SELECT id, user_id, file_name, size, status, created_at from files WHERE id = $1`
 
-	row := this.db.QueryRowContext(ctx, query, id)
+	row := r.db.QueryRowContext(ctx, query, id)
 
 	var f domain.File
 	err := row.Scan(&f.ID, &f.UserID, &f.FileName, &f.Size, &f.Status, &f.CreatedAt)

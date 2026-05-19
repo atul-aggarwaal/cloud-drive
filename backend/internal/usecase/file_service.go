@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
@@ -17,6 +18,7 @@ type FileService struct {
 	storage domain.BlobStorage
 }
 
+// NewFileService creates a new instance of FileService.
 func NewFileService(repo domain.FileRepository, storage domain.BlobStorage) *FileService {
 	return &FileService{
 		repo:    repo,
@@ -24,9 +26,9 @@ func NewFileService(repo domain.FileRepository, storage domain.BlobStorage) *Fil
 	}
 }
 
-// InitiateUpload Initiate an upload for a file by storing its metadata in DB and by providing a presigned URL
-// to S3 bucket to updload actual file.
-func (this *FileService) InitiateUpload(ctx context.Context, userId, fileName string, size int64) (*domain.File, string, error) {
+// InitiateUpload initiates an upload for a file by storing its metadata in the DB
+// and providing a presigned URL to the S3 bucket to upload the actual file.
+func (s *FileService) InitiateUpload(ctx context.Context, userId, fileName string, size int64) (*domain.File, string, error) {
 	fileId := uuid.New().String()
 
 	file := &domain.File{
@@ -38,18 +40,24 @@ func (this *FileService) InitiateUpload(ctx context.Context, userId, fileName st
 		CreatedAt: time.Now(),
 	}
 
-	if err := this.repo.Save(ctx, file); err != nil {
-		return nil, "", fmt.Errorf("Metadata persistance failure: %v", err)
+	if err := s.repo.Save(ctx, file); err != nil {
+		return nil, "", fmt.Errorf("metadata persistance failure: %w", err)
 	}
 
 	// Construct S3 path: user/<user_id>/<file_id>
 	objectKey := fmt.Sprintf("user/%s/%s", userId, fileId)
 
-	presignedURL, err := this.storage.GenerateUploadUrl(ctx, objectKey, 15*time.Minute)
+	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, 15*time.Minute)
 
 	if err != nil {
-		return nil, "", fmt.Errorf("Storage Provider error: %v", err)
+		return nil, "", fmt.Errorf("storage provider error: %w", err)
 	}
 
 	return file, presignedURL, nil
+}
+
+// CompleteUpload marks a file upload as complete.
+func (s *FileService) CompleteUpload(ctx context.Context, fileId string) error {
+	log.Printf("File Service] Completing upload for file ID :%s", fileId)
+	return s.repo.UpdateStatus(ctx, fileId, "AVAILABLE")
 }

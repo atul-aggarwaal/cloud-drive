@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// File represents the metadata of a file in the system.
 type File struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
