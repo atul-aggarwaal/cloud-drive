@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
@@ -32,7 +33,6 @@ type InitiateUploadRequest struct {
 
 func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, request *http.Request) {
 	//1. verify HTTP method (only POST allowed)
-
 	if request.Method != http.MethodPost {
 		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -74,4 +74,29 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 		"file":       file,
 		"upload_url": uploadUrl,
 	})
+}
+
+func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.Request) {
+	log.Println("Initiated Download File")
+	//Make sure it is HTTP GET method
+	if request.Method != http.MethodGet {
+		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	fileId := request.URL.Query().Get("file_id")
+	userId := request.URL.Query().Get("user_id")
+	log.Println("File ID: %s - User ID: %s ", fileId, userId)
+
+	if fileId == "" || userId == "" {
+		http.Error(writer, "Invalid request", http.StatusBadRequest)
+	}
+
+	downloadUrl, err := this.service.InitiateDownload(request.Context(), fileId, userId)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(writer, request, downloadUrl, http.StatusFound)
 }

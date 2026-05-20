@@ -65,6 +65,7 @@ func main() {
 
 	//4. Define routes
 	http.HandleFunc("/upload/initiate", fileHandler.HandleInitiateUpload)
+	http.HandleFunc("/file/download", fileHandler.DownloadFile)
 
 	//5. start server
 	log.Println("Server starting on :8080")

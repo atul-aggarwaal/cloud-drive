@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 )
@@ -47,6 +48,7 @@ func (r *PostgresFileRepository) GetByID(ctx context.Context, id string) (*domai
 	err := row.Scan(&f.ID, &f.UserID, &f.FileName, &f.Size, &f.Status, &f.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			log.Println("Record not found $v:", err)
 			return nil, nil //Not an application error, Just means "not found"
 		}
 		return nil, err

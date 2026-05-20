@@ -46,7 +46,6 @@ func (s *FileService) InitiateUpload(ctx context.Context, userId, fileName strin
 
 	// Construct S3 path: user/<user_id>/<file_id>
 	objectKey := fmt.Sprintf("user/%s/%s", userId, fileId)
-
 	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, 15*time.Minute)
 
 	if err != nil {
@@ -60,4 +59,35 @@ func (s *FileService) InitiateUpload(ctx context.Context, userId, fileName strin
 func (s *FileService) CompleteUpload(ctx context.Context, fileId string) error {
 	log.Printf("File Service] Completing upload for file ID :%s", fileId)
 	return s.repo.UpdateStatus(ctx, fileId, "AVAILABLE")
+}
+
+/*
+Validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry
+*/
+func (s *FileService) InitiateDownload(ctx context.Context, fileId string, UserId string) (string, error) {
+	file, err := s.repo.GetByID(ctx, fileId)
+
+	if err != nil {
+		return "", fmt.Errorf("fail to find file. Error: %v", err)
+	}
+	if file == nil {
+		return "", fmt.Errorf("File is null. fail to find file. Error")
+	}
+	// Only allow valid user to download file
+	if file.UserID != UserId {
+		return "", fmt.Errorf("Unauthorized user. Error: %v", err)
+	}
+	if file.Status != "AVAILABLE" {
+		return "", fmt.Errorf("file is not available for download")
+	}
+
+	objectKey := fmt.Sprintf("user/%s/%s", UserId, file.ID)
+
+	downloadUrl, err := s.storage.GenerateDownloadUrl(ctx, objectKey, 15*time.Minute)
+
+	if err != nil {
+		return "", fmt.Errorf("Storage provider error %w", err)
+	}
+
+	return downloadUrl, nil
 }
