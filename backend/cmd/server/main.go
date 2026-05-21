@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/api/handler"
 	"github.com/atul-aggarwaal/cloud-drive/internal/repository"
@@ -67,13 +68,31 @@ func main() {
 	http.HandleFunc("/upload/initiate", fileHandler.HandleInitiateUpload)
 	http.HandleFunc("/file/download", fileHandler.DownloadFile)
 
-	//5. start server
-	log.Println("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(err)
+	//5. Create an HTTP server to server incoming requests
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: nil,
 	}
+
+	//6. Run http server asynchronously in an independent thread to avoid blocking main thread.
+	go func() {
+		//5. start server
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}() //calling this function with ()
+
+	log.Println("Server is up and listening on: 8080 Press CTRL+C to stop")
 	// Wait for an OS interrupt signal to stop everything gracefully
 	<-sigChan
 	log.Println("Shutdown signal received. Cleansing worker locks...")
 	cancel() // This stops the worker loop context safely
+
+	//7. Force  HTTP server to shudown and release port 8080
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Printf("Error Shutting down server: %v", err)
+	}
 }
