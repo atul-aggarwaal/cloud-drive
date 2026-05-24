@@ -27,8 +27,9 @@ Sample request
 */
 type InitiateUploadRequest struct {
 	FileName string `json:"file_name"`
+	OwnerID  string `json:"owner_id"` // In real app this comes from a JWT token
 	Size     int64  `json:"size"`
-	UserId   string `json:"user_id"` // In real app this comes from a JWT token
+	FileHash string `json:"file_hash"`
 }
 
 func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, request *http.Request) {
@@ -45,8 +46,14 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 		return
 	}
 
+	// 3. Validate input
+	if req.FileName == "" || req.OwnerID == "" || req.Size <= 0 || req.FileHash == "" {
+		http.Error(writer, "Missing mandatory execution properties: file_name, owner_id, size, and file_hash are required", http.StatusBadRequest)
+		return
+	}
+
 	//3. Hand-off the work to service
-	file, uploadUrl, err := this.service.InitiateUpload(request.Context(), req.UserId, req.FileName, req.Size)
+	file, uploadUrl, err := this.service.InitiateUpload(request.Context(), req.OwnerID, req.FileName, req.FileHash, req.Size)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return

@@ -20,38 +20,71 @@ func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 	return &PostgresFileRepository{db: db}
 }
 
-// Save inserts a new file record into the database.
-func (r *PostgresFileRepository) Save(ctx context.Context, file *domain.File) error {
-	query := `INSERT INTO files(id, user_id, file_name, size, status, created_at)
-		VALUES($1, $2, $3, $4, $5, $6)`
-	_, err := r.db.ExecContext(ctx, query, file.ID, file.UserID, file.FileName, file.Size, file.Status, file.CreatedAt)
+/*
+ */
+func (r *PostgresFileRepository) CreateFile(ctx context.Context, file *domain.File) error {
+	query := `INSERT INTO files(id, owner_id, file_name, isFolder, created_at, updated_at) 
+			VALUES($1, $2, $3, $4, NOW(), NOW())` //Set create and update time as now.
+	_, err := r.db.ExecContext(ctx, query, file.ID, file.OwnerID, file.FileName, file.IsFolder)
 
 	return err
 }
 
-// UpdateStatus updates the upload status of a file.
-func (r *PostgresFileRepository) UpdateStatus(ctx context.Context, id string, status string) error {
-	query := `UPDATE files SET status = $1 WHERE id = $2`
-	_, err := r.db.ExecContext(ctx, query, status, id)
+/*
+ */
+func (r *PostgresFileRepository) CreateVersion(ctx context.Context, fileVersion *domain.FileVersion) error {
+	query := `INSERT INTO file_versions( file_id, version_num, file_hash, size, status, created_at
+			VALUES ($1, $2, $3, $4, $5, NOW())` //version Id is auto increment bigserial
+
+	_, err := r.db.ExecContext(ctx, query, fileVersion.FileId, fileVersion.VersionNum, fileVersion.FileHash, fileVersion.Size, fileVersion.Status)
 
 	return err
 }
 
-// GetByID retrieves a file record by its ID from the database.
-// Returns nil, nil if the file is not found.
-func (r *PostgresFileRepository) GetByID(ctx context.Context, id string) (*domain.File, error) {
-	query := `SELECT id, user_id, file_name, size, status, created_at from files WHERE id = $1`
+/*
+ */
+func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId string, versionNum int, status string) error {
+	query := `UPDATE file_versions SET status = $1 WHERE file_id = $2 AND version_num = $3`
 
+	_, err := r.db.ExecContext(ctx, query, status, fileId, versionNum)
+
+	return err
+}
+
+/*
+ */
+func (r *PostgresFileRepository) GetFileByID(ctx context.Context, id string) (*domain.File, error) {
+
+	query := `SELECT id, owner_id, file_name, isFolder, created_at, updated_at FROM files WHERE id = $1`
 	row := r.db.QueryRowContext(ctx, query, id)
 
-	var f domain.File
-	err := row.Scan(&f.ID, &f.UserID, &f.FileName, &f.Size, &f.Status, &f.CreatedAt)
+	var file domain.File
+	err := row.Scan(&file.ID, &file.OwnerID, &file.FileName, &file.IsFolder, &file.CreatedAt, &file.UpdatedAt)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Record not found $v:", err)
-			return nil, nil //Not an application error, Just means "not found"
+			return nil, nil
 		}
 		return nil, err
 	}
-	return &f, nil
+	return &file, nil
+}
+
+func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId string) (*domain.FileVersion, error) {
+	query := `SELECT id, file_id, version_num, file_hash, size, status, created_at FROM file_versions WHERE file_id =$1 ORDER BY id DESC LIMIT 1`
+	row := r.db.QueryRowContext(ctx, query, fileId)
+
+	var fileVersion domain.FileVersion
+	err := row.Scan(&fileVersion.ID, &fileVersion.FileId, &fileVersion.VersionNum, &fileVersion.FileHash, &fileVersion.Size, &fileVersion.Status, &fileVersion.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			log.Println("Record not found $v", err)
+			return nil, err
+		}
+		return nil, err
+	}
+
+	return &fileVersion, nil
 }

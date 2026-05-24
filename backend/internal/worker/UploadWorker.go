@@ -3,7 +3,9 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,7 +66,7 @@ func (this *UploadWorker) Start(ctx context.Context) {
 	}
 }
 
-func (this *UploadWorker) processMessage(ctx context.Context, message types.Message) {
+func (this *UploadWorker) processMessage(ctx context.Context, message types.Message) error {
 	type S3Record struct {
 		S3 struct {
 			Object struct {
@@ -78,12 +80,11 @@ func (this *UploadWorker) processMessage(ctx context.Context, message types.Mess
 
 	var event S3Event
 	if err := json.Unmarshal([]byte(*message.Body), &event); err != nil {
-		log.Printf("Failed to decode message body wrapper: %v", err)
-		return
+		return fmt.Errorf("Failed to decode message body wrapper: %v", err)
 	}
 
 	if len(event.Records) == 0 {
-		return
+		return nil
 	}
 
 	//2. Extract the object key. Example format: "user/user_id/file_uuid"
@@ -91,17 +92,29 @@ func (this *UploadWorker) processMessage(ctx context.Context, message types.Mess
 	log.Printf("[Queue Worker] S3 Event Captured. File Path: %s", s3Key)
 
 	// Parse UUID from S3 Key
+	//S3 file path: user/<user_id>/<file_id>/<version_num>
 	segments := strings.Split(s3Key, "/")
-	fileID := segments[len(segments)-1]
+	if len(segments) < 4 {
+		return fmt.Errorf("malformed S3 storage object key layout discovered: %s", s3Key)
+	}
 
+	fileID := segments[2]
+	fileVersionRaw := segments[3]
+
+	trimmedVersion := fileVersionRaw[1:]
+	intVersion, err := strconv.Atoi(trimmedVersion)
+	if err != nil {
+		return fmt.Errorf("failed to parse structural version sequence number token from key: %w", err)
+	}
+
+	log.Println("S3 upload confirmed. Updating status of uploaded file to Available")
 	//3. Update file status to Available
-	if err := this.service.CompleteUpload(ctx, fileID); err != nil {
-		log.Printf("failed to complete database entry updated for file %s: %v", fileID, err)
-		return
+	if err := this.service.CompleteUpload(ctx, fileID, intVersion); err != nil {
+		return fmt.Errorf("failed to complete database entry updated for file %s: %v", fileID, err)
 	}
 
 	//4. Acknowledge and delete processed message from SQS queue
-	_, err := this.sqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+	_, err = this.sqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
 		QueueUrl:      aws.String(this.queueUrl),
 		ReceiptHandle: message.ReceiptHandle,
 	})
@@ -109,4 +122,5 @@ func (this *UploadWorker) processMessage(ctx context.Context, message types.Mess
 	if err != nil {
 		log.Printf("Failed to delete message from SQS Queue :%v", err)
 	}
+	return nil
 }
