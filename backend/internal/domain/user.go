@@ -6,7 +6,7 @@ import "context"
 type UserRepository interface {
 
 	//Creates a new User in the system
-	CreateUser(ctx context.Context, user *User) (string, error)
+	CreateUser(ctx context.Context, user *User) (*User, error)
 	//Retrieves the user details using User's email ID
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
 	//Retrieves User details using username, which is always unique

@@ -17,33 +17,33 @@ func NewUserService(userRepo domain.UserRepository) *UserService {
 	return &UserService{repo: userRepo}
 }
 
-func (this *UserService) registerUser(ctx context.Context, name string, email string, password string) (string, error) {
+func (this *UserService) RegisterUser(ctx context.Context, name string, email string, password string) (*domain.User, error) {
 
 	//Validate Email ID
 	existingUserByEmail, err := this.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return "", fmt.Errorf("Email validation failed: %w", err)
+		return nil, fmt.Errorf("Email validation failed: %w", err)
 	}
 	if existingUserByEmail != nil {
-		return "", fmt.Errorf("Email already exists")
+		return nil, fmt.Errorf("Email already exists")
 	}
 
 	// Validate User Name
 	existingUserByName, err := this.repo.GetUserByName(ctx, name)
 	if err != nil {
-		return "", fmt.Errorf("Name validation failed: %w", err)
+		return nil, fmt.Errorf("Name validation failed: %w", err)
 	}
 	if existingUserByName != nil {
-		return "", fmt.Errorf("Username already exists")
+		return nil, fmt.Errorf("Username already exists")
 	}
 
 	passwordHashed, err := crypto.HashedPassword(password)
 	if err != nil {
-		return "", fmt.Errorf("Password hashing failed: %w", err)
+		return nil, fmt.Errorf("Password hashing failed: %w", err)
 	}
 	userId, err := crypto.GenerateUUID7()
 	if err != nil {
-		return "", fmt.Errorf("User ID generation failed: %w", err)
+		return nil, fmt.Errorf("User ID generation failed: %w", err)
 	}
 
 	newUser := &domain.User{
@@ -54,9 +54,9 @@ func (this *UserService) registerUser(ctx context.Context, name string, email st
 		CreatedAt:    time.Time{},
 	}
 
-	userName, err := this.repo.CreateUser(ctx, newUser)
+	user, err := this.repo.CreateUser(ctx, newUser)
 	if err != nil {
-		return "", fmt.Errorf("User Creation failed: %w", err)
+		return nil, fmt.Errorf("User Creation failed: %w", err)
 	}
-	return userName, nil
+	return user, nil
 }
