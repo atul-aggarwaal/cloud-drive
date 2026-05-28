@@ -14,15 +14,17 @@ import (
 // It orchestrates the interaction between the database (metadata)
 // and the blob storage (actual bytes).
 type FileService struct {
-	repo    domain.FileRepository
-	storage domain.BlobStorage
+	repo     domain.FileRepository
+	userRepo domain.UserRepository
+	storage  domain.BlobStorage
 }
 
 // NewFileService creates a new instance of FileService.
-func NewFileService(repo domain.FileRepository, storage domain.BlobStorage) *FileService {
+func NewFileService(repo domain.FileRepository, userRepo domain.UserRepository, storage domain.BlobStorage) *FileService {
 	return &FileService{
-		repo:    repo,
-		storage: storage,
+		repo:     repo,
+		userRepo: userRepo,
+		storage:  storage,
 	}
 }
 
@@ -38,6 +40,11 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 		FileName: fileName,
 		IsFolder: false,
 	}
+	user, err := s.userRepo.GetUserByID(ctx, ownerId)
+	if user == nil {
+		return nil, "", fmt.Errorf("File Owner validation failed: %w", err)
+	}
+
 	if err := s.repo.CreateFile(ctx, file); err != nil {
 		return nil, "", fmt.Errorf("Error while creating file: %w", err)
 	}
