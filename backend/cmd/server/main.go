@@ -52,10 +52,16 @@ func main() {
 	}
 
 	//3. initialize the layers
+
+	//Initilize file Layer
 	fileRepo := repository.NewPostresFileRepository(db)
 	blobStorage := storage.NewS3Storage(defaultConfig, "my-cloud-bucket", "http://localhost:4566")
 	fileService := usecase.NewFileService(fileRepo, blobStorage)
 	fileHandler := handler.NewFileHandler(fileService)
+	//Intilize User Layer
+	userRepo := repository.NewPostgresUserRepository(db)
+	userService := usecase.NewUserService(userRepo)
+	userHandler := handler.NewUserHandler(userService)
 
 	// 1. Initialize and boot the asynchronous event consumer loop
 	queueURL := "http://localhost:4566/000000000000/file-upload-queue"
@@ -67,6 +73,7 @@ func main() {
 	//4. Define routes
 	http.HandleFunc("/upload/initiate", fileHandler.HandleInitiateUpload)
 	http.HandleFunc("/file/download", fileHandler.DownloadFile)
+	http.HandleFunc("/user/register", userHandler.HandleRegister)
 
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{

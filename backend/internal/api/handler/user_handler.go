@@ -7,12 +7,14 @@ import (
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
 )
 
-type NewUserHandler struct {
-	userService usecase.UserService
+type UserHandler struct {
+	userService *usecase.UserService
 }
 
-func (this *NewUserHandler) NewUserHandler(service usecase.UserService) *NewUserHandler {
-	return &NewUserHandler{userService: service}
+func NewUserHandler(service *usecase.UserService) *UserHandler {
+	return &UserHandler{
+		userService: service,
+	}
 }
 
 // Struct representing Input Request
@@ -30,7 +32,7 @@ type RegisterUserResponse struct {
 }
 
 // Handles new user Registration. Validates user Inputs and create new Uer accordingly through UserService
-func (this *NewUserHandler) HandleRegister(r *http.Request, w http.ResponseWriter) {
+func (this *UserHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	//1. Make sure request comes from HTTP POST method
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

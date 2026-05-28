@@ -12,19 +12,19 @@ type PostresUserRepository struct {
 	db *sql.DB
 }
 
-func NewPostgresRepository(db *sql.DB) *PostgresFileRepository {
-	return &PostgresFileRepository{db: db}
+func NewPostgresUserRepository(db *sql.DB) *PostresUserRepository {
+	return &PostresUserRepository{db: db}
 }
 
-func (p PostresUserRepository) CreateUser(ctx context.Context, user *domain.User) (string, error) {
+func (p PostresUserRepository) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
 	query := `INSERT INTO users(id, username, email, password_hash, created_at)
 				VALUES($1, $2, $3, $4, NOW();`
 	_, err := p.db.ExecContext(ctx, query, user.ID, user.UserName, user.Email, user.PasswordHash)
 
 	if err != nil {
-		return "", fmt.Errorf("user creation failed :%w", err)
+		return nil, fmt.Errorf("user creation failed :%w", err)
 	}
-	return user.ID, nil
+	return user, nil
 }
 
 func (p PostresUserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
