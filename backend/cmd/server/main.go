@@ -71,9 +71,13 @@ func main() {
 	go uploadWorker.Start(ctx)
 
 	//4. Define routes
-	http.HandleFunc("/upload/initiate", fileHandler.HandleInitiateUpload)
-	http.HandleFunc("/file/download", fileHandler.DownloadFile)
+	// Public interface like login and new user registration don't require JWT tokens
 	http.HandleFunc("/user/register", userHandler.HandleRegister)
+	http.HandleFunc("/user/login", userHandler.HandleLogin)
+
+	//Wrap secure paths with AuthInterceptor which validates a valid JWT token before allowing upload/download
+	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
+	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
 
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{

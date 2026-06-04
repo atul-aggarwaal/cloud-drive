@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/atul-aggarwaal/cloud-drive/internal/pkg/crypto"
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
 )
 
@@ -29,6 +30,45 @@ type RegisterUserResponse struct {
 	ID       string `json:"id"`
 	UserName string `json:"username"`
 	Email    string `json:"email"`
+}
+
+// Struct representing User login request
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// Struct representing reponse to Login Request
+type LoginResponse struct {
+	Token string `json:"token"` //JWT access token
+}
+
+func (this *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Access Denied: Malformed Request Payload", http.StatusBadRequest)
+		return
+	}
+
+	user, err := this.userService.AuthenticateUser(r.Context(), req.Email, req.Password)
+	if err != nil {
+		http.Error(w, "Access Denied: Authentication failed", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := crypto.GenerateAccessToken(user.ID, user.UserName)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(LoginResponse{Token: token})
 }
 
 // Handles new user Registration. Validates user Inputs and create new Uer accordingly through UserService

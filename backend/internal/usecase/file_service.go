@@ -42,11 +42,11 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 	}
 	user, err := s.userRepo.GetUserByID(ctx, ownerId)
 	if user == nil {
-		return nil, "", fmt.Errorf("File Owner validation failed: %w", err)
+		return nil, "", fmt.Errorf("file owner validation failed: %w", err)
 	}
 
 	if err := s.repo.CreateFile(ctx, file); err != nil {
-		return nil, "", fmt.Errorf("Error while creating file: %w", err)
+		return nil, "", fmt.Errorf("error while creating file: %w", err)
 	}
 
 	//Create Metadata for FileVersion
@@ -58,7 +58,7 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 		Status:     "PENDING",
 	}
 	if err := s.repo.CreateVersion(ctx, fileVersion); err != nil {
-		return nil, "", fmt.Errorf("Error while creating first file version: %w", err)
+		return nil, "", fmt.Errorf("error while creating first file version: %w", err)
 	}
 
 	// Construct S3 path: user/<user_id>/<file_id>/<version_num>
@@ -78,30 +78,28 @@ func (s *FileService) CompleteUpload(ctx context.Context, fileId string, version
 	return s.repo.UpdateVersionStatus(ctx, fileId, versionNum, "AVAILABLE")
 }
 
-/*
-Validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry
-*/
+// InitiateDownload validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry.
 func (s *FileService) InitiateDownload(ctx context.Context, fileId string, UserId string) (string, error) {
 	file, err := s.repo.GetFileByID(ctx, fileId)
 	fileVersion, err2 := s.repo.GetLatestVersion(ctx, fileId)
 
 	if err != nil {
-		return "", fmt.Errorf("fail to find file. Error: %v", err)
+		return "", fmt.Errorf("fail to find file: %v", err)
 	}
 	if err2 != nil {
-		return "", fmt.Errorf("fail to find file. Error: %v", err2)
+		return "", fmt.Errorf("fail to find file version: %v", err2)
 	}
 
 	if file == nil {
-		return "", fmt.Errorf("File is null. fail to find file. Error")
+		return "", fmt.Errorf("file is null, fail to find file")
 	}
 	if fileVersion == nil {
-		return "", fmt.Errorf("File to locate latest file version. Error")
+		return "", fmt.Errorf("failed to locate latest file version")
 	}
 	// Only allow valid user to download file
 
 	if file.OwnerID != UserId {
-		return "", fmt.Errorf("Unauthorized user. Error: %v", err)
+		return "", fmt.Errorf("unauthorized user")
 	}
 	if fileVersion.Status != "AVAILABLE" {
 		return "", fmt.Errorf("file is not available for download")
@@ -111,7 +109,7 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, UserI
 	downloadUrl, err := s.storage.GenerateDownloadUrl(ctx, objectKey, 15*time.Minute)
 
 	if err != nil {
-		return "", fmt.Errorf("Storage provider error %w", err)
+		return "", fmt.Errorf("storage provider error: %w", err)
 	}
 
 	return downloadUrl, nil

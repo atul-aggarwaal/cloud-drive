@@ -60,3 +60,22 @@ func (this *UserService) RegisterUser(ctx context.Context, name string, email st
 	}
 	return user, nil
 }
+
+// Authenticate User based with email and password
+func (this *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*domain.User, error) {
+	user, err := this.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("authentication failed: Invalid email/password")
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("authentication failed: user doesn't exist")
+	}
+
+	passwordMatch := crypto.VerifyPassword(password, user.PasswordHash)
+	if passwordMatch {
+		return nil, fmt.Errorf("authentication failed: Invalid email/password")
+	}
+
+	return user, nil
+}

@@ -21,13 +21,11 @@ Sample request
 
 	{
 		"file_name": "vacation_vidoe.mp4",
-		"size": 106324234,
-		"user_id": "rocky_02"
+		"size": 106324234
 	}
 */
 type InitiateUploadRequest struct {
 	FileName string `json:"file_name"`
-	OwnerID  string `json:"owner_id"` // In real app this comes from a JWT token
 	Size     int64  `json:"size"`
 	FileHash string `json:"file_hash"`
 }
@@ -39,6 +37,12 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 		return
 	}
 
+	userId := request.Context().Value(UserIdKey).(string)
+	if userId == "" {
+		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	//2. Decode incoming Json Pipe
 	var req InitiateUploadRequest //Creates an instance of business object and maps incmoing request to this
 	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
@@ -47,13 +51,13 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 	}
 
 	// 3. Validate input
-	if req.FileName == "" || req.OwnerID == "" || req.Size <= 0 || req.FileHash == "" {
-		http.Error(writer, "Missing mandatory execution properties: file_name, owner_id, size, and file_hash are required", http.StatusBadRequest)
+	if req.FileName == "" || req.Size <= 0 || req.FileHash == "" {
+		http.Error(writer, "Missing mandatory execution properties: file_name, size, and file_hash are required", http.StatusBadRequest)
 		return
 	}
 
 	//3. Hand-off the work to service
-	file, uploadUrl, err := this.service.InitiateUpload(request.Context(), req.OwnerID, req.FileName, req.FileHash, req.Size)
+	file, uploadUrl, err := this.service.InitiateUpload(request.Context(), userId, req.FileName, req.FileHash, req.Size)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -92,7 +96,7 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	}
 
 	fileId := request.URL.Query().Get("file_id")
-	userId := request.URL.Query().Get("user_id")
+	userId := request.URL.Query().Get("ctx_verified_user_id")
 	log.Println("File ID: %s - User ID: %s ", fileId, userId)
 
 	if fileId == "" || userId == "" {

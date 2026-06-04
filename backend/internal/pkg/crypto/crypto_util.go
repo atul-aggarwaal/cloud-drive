@@ -25,9 +25,9 @@ func HashedPassword(plainText string) (string, error) {
 	return string(hashedBytes), nil
 }
 
-// Hash plain text passwordusing salt and cost embedded in hashed password and compare
+// Hash plain text password using salt and cost embedded in hashed password and compare
 // output with hashed password, If output is same, password match is success else fail.
-func verifyPassword(password string, hashedPassword string) bool {
+func VerifyPassword(password string, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	return err != nil
 }
