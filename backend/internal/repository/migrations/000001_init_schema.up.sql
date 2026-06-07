@@ -1,0 +1,29 @@
+-- Version: 000001_init_schema.up.sql
+
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS files (
+    id VARCHAR(36) PRIMARY KEY,
+    owner_id VARCHAR(36) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    is_folder BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT fk_file_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS file_versions (
+    id SERIAL PRIMARY KEY,
+    file_id VARCHAR(36) NOT NULL,
+    version_num INT NOT NULL,
+    file_hash VARCHAR(64) NOT NULL,
+    size BIGINT NOT NULL,
+    status VARCHAR(20) DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT fk_version_file FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE CASCADE
+);

@@ -43,6 +43,11 @@ func main() {
 	}
 	defer db.Close()
 
+	//Run DB Migration
+	if err := repository.RunDatabaseMigration(db); err != nil {
+		log.Fatal("CRITICAL: Database synchronization failed %w", err)
+	}
+
 	//2. setup aws config for localstack pointing to http://localhost:4566 instead of real AWS
 	defaultConfig, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion("us-east-1"),
