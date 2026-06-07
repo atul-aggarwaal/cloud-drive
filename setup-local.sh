@@ -54,50 +54,51 @@ echo "Injecting multi-table database metadata schemas..."
 export PGPASSWORD=drive_secret
 
 # Stream the SQL definitions directly into the active database container
-docker exec -i cloud-drive-postgres-1 psql -U drive_admin -d cloud_drive << 'EOF'
+# docker exec -i cloud-drive-postgres-1 psql -U drive_admin -d cloud_drive << 'EOF'
 
--- FIX: Clear out conflicting legacy structures in reverse dependency order
-DROP TABLE IF EXISTS file_versions CASCADE;
-DROP TABLE IF EXISTS files CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
+# -- FIX: Clear out conflicting legacy structures in reverse dependency order
+# DROP TABLE IF EXISTS file_versions CASCADE;
+# DROP TABLE IF EXISTS files CASCADE;
+# DROP TABLE IF EXISTS users CASCADE;
 
 
--- A. Create Users Table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY,
-    username VARCHAR(100) NOT NULL UNIQUE,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+# -- A. Create Users Table
+# CREATE TABLE IF NOT EXISTS users (
+#     id UUID PRIMARY KEY,
+#     username VARCHAR(100) NOT NULL UNIQUE,
+#     email VARCHAR(255) NOT NULL UNIQUE,
+#     password_hash VARCHAR(255) NOT NULL,
+#     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+# );
 
--- B. Create Files Table (The logical asset pointer)
-CREATE TABLE IF NOT EXISTS files (
-    id UUID PRIMARY KEY,
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    file_name VARCHAR(255) NOT NULL,
-    is_folder BOOLEAN DEFAULT FALSE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+# -- B. Create Files Table (The logical asset pointer)
+# CREATE TABLE IF NOT EXISTS files (
+#     id UUID PRIMARY KEY,
+#     owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+#     file_name VARCHAR(255) NOT NULL,
+#     is_folder BOOLEAN DEFAULT FALSE NOT NULL,
+#     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+#     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+# );
 
--- C. Create File Versions Table (The physical immutable storage manifest)
-CREATE TABLE IF NOT EXISTS file_versions (
-    id BIGSERIAL PRIMARY KEY,
-    file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
-    version_num INT NOT NULL DEFAULT 1,
-    file_hash VARCHAR(64) NOT NULL,
-    size BIGINT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT unique_file_version UNIQUE (file_id, version_num)
-);
+# -- C. Create File Versions Table (The physical immutable storage manifest)
+# CREATE TABLE IF NOT EXISTS file_versions (
+#     id BIGSERIAL PRIMARY KEY,
+#     file_id UUID NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+#     version_num INT NOT NULL DEFAULT 1,
+#     file_hash VARCHAR(64) NOT NULL,
+#     size BIGINT NOT NULL,
+#     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+#     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+#     CONSTRAINT unique_file_version UNIQUE (file_id, version_num)
+# );
 
--- D. Look-up Optimization Index Construction
-CREATE INDEX IF NOT EXISTS idx_files_owner ON files(owner_id);
-CREATE INDEX IF NOT EXISTS idx_versions_file ON file_versions(file_id);
-EOF
+# -- D. Look-up Optimization Index Construction
+# CREATE INDEX IF NOT EXISTS idx_files_owner ON files(owner_id);
+# CREATE INDEX IF NOT EXISTS idx_versions_file ON file_versions(file_id);
+# EOF
 
-echo "PostgreSQL schemas and indexes compiled successfully."
-echo "========================================================"
+# echo "PostgreSQL schemas and indexes compiled successfully."
+# echo "========================================================"
+
 echo "Project infrastructure configuration is completely ready!"

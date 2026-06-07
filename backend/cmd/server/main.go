@@ -45,7 +45,7 @@ func main() {
 
 	//Run DB Migration
 	if err := repository.RunDatabaseMigration(db); err != nil {
-		log.Fatal("CRITICAL: Database synchronization failed %w", err)
+		log.Fatal("CRITICAL: Database synchronization failed", err)
 	}
 
 	//2. setup aws config for localstack pointing to http://localhost:4566 instead of real AWS
@@ -86,7 +86,7 @@ func main() {
 
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    ":8081",
 		Handler: nil,
 	}
 
@@ -98,9 +98,10 @@ func main() {
 		}
 	}() //calling this function with ()
 
-	log.Println("Server is up and listening on: 8080 Press CTRL+C to stop")
+	log.Println("Server is up and listening on: 8081 Press CTRL+C to stop")
 	// Wait for an OS interrupt signal to stop everything gracefully
 	<-sigChan
+
 	log.Println("Shutdown signal received. Cleansing worker locks...")
 	cancel() // This stops the worker loop context safely
 
