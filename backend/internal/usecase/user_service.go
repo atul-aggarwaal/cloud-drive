@@ -73,7 +73,7 @@ func (this *UserService) AuthenticateUser(ctx context.Context, email string, pas
 	}
 
 	passwordMatch := crypto.VerifyPassword(password, user.PasswordHash)
-	if passwordMatch {
+	if !passwordMatch {
 		return nil, fmt.Errorf("authentication failed: Invalid email/password")
 	}
 

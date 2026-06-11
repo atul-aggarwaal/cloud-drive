@@ -94,9 +94,10 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
+	
+	userId := request.Context().Value(UserIdKey).(string)
 	fileId := request.URL.Query().Get("file_id")
-	userId := request.URL.Query().Get("ctx_verified_user_id")
+	
 	log.Println("File ID: %s - User ID: %s ", fileId, userId)
 
 	if fileId == "" || userId == "" {

@@ -64,8 +64,9 @@ func main() {
 
 	//Initilize file Layer
 	fileRepo := repository.NewPostresFileRepository(db)
+	fileShareRepo := repository.NewPostgresFileShareRepository(db)
 	blobStorage := storage.NewS3Storage(defaultConfig, "my-cloud-bucket", "http://localhost:4566")
-	fileService := usecase.NewFileService(fileRepo, userRepo, blobStorage)
+	fileService := usecase.NewFileService(fileRepo, userRepo, blobStorage, fileShareRepo)
 	fileHandler := handler.NewFileHandler(fileService)
 
 	// 1. Initialize and boot the asynchronous event consumer loop
@@ -81,7 +82,7 @@ func main() {
 	http.HandleFunc("/user/login", userHandler.HandleLogin)
 
 	//Wrap secure paths with AuthInterceptor which validates a valid JWT token before allowing upload/download
-	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
+	http.HandleFunc("/file/upload", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
 	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
 
 	//5. Create an HTTP server to server incoming requests

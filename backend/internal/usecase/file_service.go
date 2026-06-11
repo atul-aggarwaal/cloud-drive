@@ -14,17 +14,19 @@ import (
 // It orchestrates the interaction between the database (metadata)
 // and the blob storage (actual bytes).
 type FileService struct {
-	repo     domain.FileRepository
-	userRepo domain.UserRepository
-	storage  domain.BlobStorage
+	repo          domain.FileRepository
+	userRepo      domain.UserRepository
+	storage       domain.BlobStorage
+	fileShareRepo domain.FileShareRepository
 }
 
 // NewFileService creates a new instance of FileService.
-func NewFileService(repo domain.FileRepository, userRepo domain.UserRepository, storage domain.BlobStorage) *FileService {
+func NewFileService(repo domain.FileRepository, userRepo domain.UserRepository, storage domain.BlobStorage, fileShareRepo domain.FileShareRepository) *FileService {
 	return &FileService{
-		repo:     repo,
-		userRepo: userRepo,
-		storage:  storage,
+		repo:          repo,
+		userRepo:      userRepo,
+		storage:       storage,
+		fileShareRepo: fileShareRepo,
 	}
 }
 
@@ -79,7 +81,7 @@ func (s *FileService) CompleteUpload(ctx context.Context, fileId string, version
 }
 
 // InitiateDownload validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry.
-func (s *FileService) InitiateDownload(ctx context.Context, fileId string, UserId string) (string, error) {
+func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userId string) (string, error) {
 	file, err := s.repo.GetFileByID(ctx, fileId)
 	fileVersion, err2 := s.repo.GetLatestVersion(ctx, fileId)
 
@@ -96,16 +98,25 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, UserI
 	if fileVersion == nil {
 		return "", fmt.Errorf("failed to locate latest file version")
 	}
-	// Only allow valid user to download file
 
-	if file.OwnerID != UserId {
-		return "", fmt.Errorf("unauthorized user")
+	// Only allow valid user to download file
+	// Validate file access, if user id doesn't match with owner id of file.
+	if userId != file.OwnerID {
+
+		isAccesible, err := s.fileShareRepo.HasAccess(ctx, fileId, userId)
+		if err != nil {
+			return "", fmt.Errorf("error validating file authorization %w", err)
+		}
+		if !isAccesible {
+			return "", fmt.Errorf("unauthorized access")
+		}
 	}
+
 	if fileVersion.Status != "AVAILABLE" {
 		return "", fmt.Errorf("file is not available for download")
 	}
 
-	objectKey := fmt.Sprintf("user/%s/%s/v%d", UserId, file.ID, fileVersion.VersionNum)
+	objectKey := fmt.Sprintf("user/%s/%s/v%d", userId, file.ID, fileVersion.VersionNum)
 	downloadUrl, err := s.storage.GenerateDownloadUrl(ctx, objectKey, 15*time.Minute)
 
 	if err != nil {
