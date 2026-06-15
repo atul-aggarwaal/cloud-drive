@@ -29,5 +29,5 @@ func HashedPassword(plainText string) (string, error) {
 // output with hashed password, If output is same, password match is success else fail.
 func VerifyPassword(password string, hashedPassword string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	return err != nil
+	return err == nil
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/pkg/crypto"
@@ -21,8 +22,8 @@ func NewUserHandler(service *usecase.UserService) *UserHandler {
 // Struct representing Input Request
 type RegisterUserRequest struct {
 	UserName string `json:"username"`
-	email    string `json:"email"`
-	password string `json:"password"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // Struct representing handler's response
@@ -57,7 +58,7 @@ func (this *UserHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := this.userService.AuthenticateUser(r.Context(), req.Email, req.Password)
 	if err != nil {
-		http.Error(w, "Access Denied: Authentication failed", http.StatusUnauthorized)
+		http.Error(w, fmt.Sprintf("Access Denied: Authentication failed %v", err), http.StatusUnauthorized)
 		return
 	}
 
@@ -88,14 +89,14 @@ func (this *UserHandler) HandleRegister(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// 3. Perform input validations
-	if req.UserName == "" || req.email == "" || req.password == "" {
+	if req.UserName == "" || req.Email == "" || req.Password == "" {
 		http.Error(w, "Missing mandatory properties : User Name, Password and email", http.StatusBadRequest)
 		return
 	}
 	//TODO email, username and Password length validations, password policy enforcement etc.
 
 	//4. Send user details to UserService for user cration
-	user, err := this.userService.RegisterUser(r.Context(), req.UserName, req.email, req.password)
+	user, err := this.userService.RegisterUser(r.Context(), req.UserName, req.Email, req.Password)
 
 	//5. Handle UserService errors, if any
 	if err != nil {

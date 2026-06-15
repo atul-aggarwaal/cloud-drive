@@ -65,7 +65,7 @@ func (this *UserService) RegisterUser(ctx context.Context, name string, email st
 func (this *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*domain.User, error) {
 	user, err := this.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("authentication failed: Invalid email/password")
+		return nil, fmt.Errorf("authentication failed: Invalid email/password %v", err)
 	}
 
 	if user == nil {

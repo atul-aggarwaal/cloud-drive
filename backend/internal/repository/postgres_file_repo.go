@@ -22,7 +22,7 @@ func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 
 // CreateFile inserts a new file metadata record into the database.
 func (r *PostgresFileRepository) CreateFile(ctx context.Context, file *domain.File) error {
-	query := `INSERT INTO files(id, owner_id, file_name, isFolder, created_at, updated_at) 
+	query := `INSERT INTO files(id, owner_id, file_name, is_folder, created_at, updated_at) 
 			VALUES($1, $2, $3, $4, NOW(), NOW())` //Set create and update time as now.
 	_, err := r.db.ExecContext(ctx, query, file.ID, file.OwnerID, file.FileName, file.IsFolder)
 

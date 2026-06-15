@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -39,6 +40,7 @@ func GenerateAccessToken(userID string, userName string) (string, error) {
 
 // Validate incoming JWT token
 func ValidateToken(tokenStr string) (*UserClaims, error) {
+	log.Printf("Validating token %s", tokenStr)
 	token, err := jwt.ParseWithClaims(tokenStr, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected cryptographic signature method: %v", token.Header["alg"])

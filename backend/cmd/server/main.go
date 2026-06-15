@@ -27,6 +27,9 @@ import (
 // It sets up the database connection, AWS configuration,
 // initializes the layers, and starts the HTTP server.
 func main() {
+	wd, _ := os.Getwd()
+	log.Printf("WORKING DIR = %s", wd)
+	
 	//1. Establish top level context lifecycle listeners
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -80,9 +83,8 @@ func main() {
 	// Public interface like login and new user registration don't require JWT tokens
 	http.HandleFunc("/user/register", userHandler.HandleRegister)
 	http.HandleFunc("/user/login", userHandler.HandleLogin)
-
 	//Wrap secure paths with AuthInterceptor which validates a valid JWT token before allowing upload/download
-	http.HandleFunc("/file/upload", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
+	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
 	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
 
 	//5. Create an HTTP server to server incoming requests

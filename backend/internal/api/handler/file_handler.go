@@ -55,7 +55,7 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 		http.Error(writer, "Missing mandatory execution properties: file_name, size, and file_hash are required", http.StatusBadRequest)
 		return
 	}
-
+	log.Printf("request validated successfully")
 	//3. Hand-off the work to service
 	file, uploadUrl, err := this.service.InitiateUpload(request.Context(), userId, req.FileName, req.FileHash, req.Size)
 	if err != nil {
@@ -94,10 +94,10 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	
+
 	userId := request.Context().Value(UserIdKey).(string)
 	fileId := request.URL.Query().Get("file_id")
-	
+
 	log.Println("File ID: %s - User ID: %s ", fileId, userId)
 
 	if fileId == "" || userId == "" {

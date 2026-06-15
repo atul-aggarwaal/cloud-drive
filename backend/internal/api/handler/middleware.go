@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -45,6 +46,7 @@ func AuthInterceptor(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		log.Printf("VToken validated successfully for user %s with user id %s", claims.Username, claims.UserID)
 		// Inject user id in context
 		ctx := context.WithValue(r.Context(), UserIdKey, claims.UserID)
 
