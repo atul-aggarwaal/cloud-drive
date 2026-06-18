@@ -65,7 +65,7 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 
 	// Construct S3 path: user/<user_id>/<file_id>/<version_num>
 	objectKey := fmt.Sprintf("user/%s/%s/v1", ownerId, fileId)
-	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, 15*time.Minute)
+	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, fileHash, 15*time.Minute)
 
 	if err != nil {
 		return nil, "", fmt.Errorf("storage provider error: %w", err)

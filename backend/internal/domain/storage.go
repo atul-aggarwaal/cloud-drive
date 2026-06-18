@@ -10,7 +10,7 @@ import (
 type BlobStorage interface {
 
 	// GenerateUploadUrl creates a temporary, secure URL for the client to upload a file directly
-	GenerateUploadUrl(ctx context.Context, key string, expireIn time.Duration) (string, error)
+	GenerateUploadUrl(ctx context.Context, key string, fileHash string, expireIn time.Duration) (string, error)
 
 	/*
 		Gemerates a pre-signed download url for a given file
