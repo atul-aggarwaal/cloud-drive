@@ -29,7 +29,7 @@ import (
 func main() {
 	wd, _ := os.Getwd()
 	log.Printf("WORKING DIR = %s", wd)
-	
+
 	//1. Establish top level context lifecycle listeners
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -72,6 +72,8 @@ func main() {
 	fileService := usecase.NewFileService(fileRepo, userRepo, blobStorage, fileShareRepo)
 	fileHandler := handler.NewFileHandler(fileService)
 
+	fileShareService := usecase.NewFileShareService(fileRepo, fileShareRepo, userRepo)
+	fileShareHandler := handler.NewFileShareHandler(fileShareService)
 	// 1. Initialize and boot the asynchronous event consumer loop
 	queueURL := "http://localhost:4566/000000000000/file-upload-queue"
 	uploadWorker := worker.NewUploadWorker(defaultConfig, queueURL, fileService, "http://localhost:4566")
@@ -86,6 +88,7 @@ func main() {
 	//Wrap secure paths with AuthInterceptor which validates a valid JWT token before allowing upload/download
 	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
 	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
+	http.HandleFunc("/file/share", handler.AuthInterceptor(fileShareHandler.NewFileShareRequest))
 
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{

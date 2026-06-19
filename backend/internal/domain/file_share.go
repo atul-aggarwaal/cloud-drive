@@ -14,6 +14,11 @@ type FileShare struct {
 	CreatedAt        time.Time `json:"created_at"`       // Time at which permission was given
 }
 
+type FileShareRequest struct {
+	FileID          string `json:"file_id"`
+	TargetEmail     string `json:"target_email"`
+	PermissionLevel string `json:"permission_level"`
+}
 type FileShareRepository interface {
 	CreateShare(ctx context.Context, share *FileShare) error
 	HasAccess(ctx context.Context, fileId string, userId string) (bool, error)
