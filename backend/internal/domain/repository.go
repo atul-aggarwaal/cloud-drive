@@ -17,5 +17,11 @@ type FileRepository interface {
 
 	// GetFileByID retrieves a file metadata record by its ID.
 	GetFileByID(ctx context.Context, id string) (*File, error)
+
+	//Get all files owned by or shared with the user
+	GetFiles(ctx context.Context, userId string) ([]*File, error)
+	
+	//Get lateest version of a file by file id
 	GetLatestVersion(ctx context.Context, fileId string) (*FileVersion, error)
+
 }

@@ -88,7 +88,7 @@ func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, reques
 }
 
 func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.Request) {
-	log.Println("Initiated Download File")
+	log.Println("Handling Download File Request")
 	//Make sure it is HTTP GET method
 	if request.Method != http.MethodGet {
 		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
@@ -98,7 +98,7 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	userId := request.Context().Value(UserIdKey).(string)
 	fileId := request.URL.Query().Get("file_id")
 
-	log.Println("File ID: %s - User ID: %s ", fileId, userId)
+	log.Printf("file id: %s - user id: %s", fileId, userId)
 
 	if fileId == "" || userId == "" {
 		http.Error(writer, "Invalid request", http.StatusBadRequest)
@@ -111,4 +111,29 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	}
 
 	http.Redirect(writer, request, downloadUrl, http.StatusFound)
+}
+
+func (this * FileHandler) ListFiles(writer http.ResponseWriter, request *http.Request){
+
+	if http.MethodGet != request.Method{
+		http.Error(writer, "method not allowed ", http.StatusMethodNotAllowed)
+	}
+
+	userId, ok := request.Context().Value(UserIdKey).(string)
+
+	if !ok || userId ==""{
+		http.Error(writer,"Unatuorized user",http.StatusUnauthorized)
+		return
+	}
+	files, error := this.service.ListFilesForUser(request.Context(),userId)
+
+	if error!=nil {
+		log.Panic(error)
+		http.Error(writer, "Error retrieving files for user", http.StatusInternalServerError)
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(writer).Encode(files)
 }

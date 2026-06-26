@@ -18,12 +18,8 @@ type S3Storage struct {
 }
 
 // NewS3Storage creates a new instance of S3Storage.
-func NewS3Storage(cfg aws.Config, bucketName string, endpoint string) *S3Storage {
+func NewS3Storage(cfg aws.Config, bucketName string) *S3Storage {
 	client := s3.NewFromConfig(cfg, func(options *s3.Options) {
-		// This is the non-deprecated, modern way to point to LocalStack
-		if endpoint != "" {
-			options.BaseEndpoint = aws.String(endpoint)
-		}
 		options.UsePathStyle = true
 	})
 
@@ -43,10 +39,17 @@ func (this *S3Storage) GenerateUploadUrl(ctx context.Context, key string, fileHa
 		ChecksumAlgorithm: types.ChecksumAlgorithmMd5, // expect two additional headers in the request: x-amz-checksum-algorithm and x-amz-checksum-md5
 	}
 
-	request, err := this.presignClient.PresignPutObject(ctx, input, func(opts *s3.PresignOptions) {opts.Expires = expireIn})
+	request, err := this.presignClient.PresignPutObject(ctx, input, func(opts *s3.PresignOptions) {
+		opts.Expires = expireIn
+	})
 	if err != nil {
 		return "", fmt.Errorf("Failed to generate presigned URL for upload %v", err)
 	}
+
+	//Add Custom headers to the presigned request
+	// request.SignedHeader.Add("x-amz-checksum-md5", fileHash)
+	// request.SignedHeader.Add("x-amz-checksum-algorithm", "MD5")
+
 	return request.URL, nil
 }
 

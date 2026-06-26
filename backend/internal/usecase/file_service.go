@@ -82,6 +82,8 @@ func (s *FileService) CompleteUpload(ctx context.Context, fileId string, version
 
 // InitiateDownload validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry.
 func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userId string) (string, error) {
+	log.Println("Initiating download for file")
+
 	file, err := s.repo.GetFileByID(ctx, fileId)
 	fileVersion, err2 := s.repo.GetLatestVersion(ctx, fileId)
 
@@ -116,7 +118,7 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userI
 		return "", fmt.Errorf("file is not available for download")
 	}
 
-	objectKey := fmt.Sprintf("user/%s/%s/v%d", userId, file.ID, fileVersion.VersionNum)
+	objectKey := fmt.Sprintf("user/%s/%s/v%d", file.OwnerID, file.ID, fileVersion.VersionNum)
 	downloadUrl, err := s.storage.GenerateDownloadUrl(ctx, objectKey, 15*time.Minute)
 
 	if err != nil {
@@ -124,4 +126,21 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userI
 	}
 
 	return downloadUrl, nil
+}
+
+func(s *FileService) ListFilesForUser(ctx context.Context, userId string) ([] *domain.File, error){
+	 log.Printf("executing service method to list files.")
+
+	 files, error :=s.repo.GetFiles(ctx, userId)
+
+	 if error !=nil{
+		return nil, fmt.Errorf("failed to list files %w", error)
+	 }
+
+	 if len(files) == 0{
+		user,err  := s.userRepo.GetUserByID(ctx, userId)
+		if err!=nil {log.Printf("No files found for user {}", user.UserName)}
+		return nil, nil
+	 }
+	 return files, nil
 }

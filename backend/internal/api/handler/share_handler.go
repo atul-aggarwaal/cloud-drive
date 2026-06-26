@@ -36,7 +36,7 @@ func (s *FileShareHandler) NewFileShareRequest(w http.ResponseWriter, r *http.Re
 	}
 
 	if err := s.service.ShareFile(r.Context(), userId, fileShareRequest); err != nil {
-		http.Error(w, fmt.Sprintf("Error occurred while sharing file %w", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error occurred while sharing file %v", err), http.StatusInternalServerError)
 		return
 	}
 

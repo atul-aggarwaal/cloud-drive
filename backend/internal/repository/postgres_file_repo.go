@@ -50,8 +50,8 @@ func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId
 
 // GetFileByID retrieves a file metadata record by its ID.
 func (r *PostgresFileRepository) GetFileByID(ctx context.Context, id string) (*domain.File, error) {
-
-	query := `SELECT id, owner_id, file_name, isFolder, created_at, updated_at FROM files WHERE id = $1`
+	log.Printf("Fetching file metadata for ID: %s", id)
+	query := `SELECT id, owner_id, file_name, is_folder, created_at, updated_at FROM files WHERE id = $1`
 	row := r.db.QueryRowContext(ctx, query, id)
 
 	var file domain.File
@@ -84,4 +84,34 @@ func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId st
 	}
 
 	return &fileVersion, nil
+}
+
+func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([]*domain.File, error) {
+	query := `SELECT id, owner_id, file_name, is_folder, created_at, updated_at 
+				FROM files 
+				WHERE owner_id = $1
+				OR EXISTS(
+							SELECT 1 
+							FROM file_shares 
+							WHERE file_shares.file_id = files.id 
+							AND file_shares.shared_with_user_id = $1
+						)`
+	
+						rows, err := r.db.QueryContext(ctx, query, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var files []*domain.File
+	for rows.Next() {
+		var file domain.File
+		err := rows.Scan(&file.ID, &file.OwnerID, &file.FileName, &file.IsFolder, &file.CreatedAt, &file.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, &file)
+	}
+	
+	return files, nil
 }

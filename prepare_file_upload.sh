@@ -7,5 +7,5 @@ jq -n \
   '{
       file_name: $filename,
       size: $size,
-      md5: $md5
+      file_hash: $md5
    }'

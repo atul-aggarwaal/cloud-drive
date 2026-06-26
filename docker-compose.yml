@@ -3,16 +3,19 @@ version: "3.8"
 services:
   # 1. The Storage Engine (Local S3)
   localstack:
-    image: localstack/localstack
+    image: localstack/localstack:stable
     ports:
       - "4566:4566"            # S3 API Port
       - "4510-4559:4510-4559"  # Other AWS Services
     environment:
       # Pulls the token securely from your .env file
       - LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN}
+      - PERSISTENCE=1
     volumes:
       # Gives LocalStack access to the Docker engine (required for some pro features)
       - "/var/run/docker.sock:/var/run/docker.sock"
+      # Persist localstack data locally
+      - ./localstack-data:/var/lib/localstack
 
   # 2. The Metadata Engine (Database)
   postgres:

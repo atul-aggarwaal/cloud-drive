@@ -19,8 +19,8 @@ import (
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
 	"github.com/atul-aggarwaal/cloud-drive/internal/worker"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 )
 
 // main is the entry point of the server application.
@@ -52,9 +52,16 @@ func main() {
 	}
 
 	//2. setup aws config for localstack pointing to http://localhost:4566 instead of real AWS
+	err = godotenv.Load("../.env")
+	if err!=nil{
+		log.Println("No .env file found, falling back to system env variables")
+	}
+
+	// No Need to provide credentials hare. SDK will automatically read the credentials
+	// from .env file loaded by "os" above and since names AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+	// are standard, it will work.
 	defaultConfig, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion("us-east-1"),
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider("mock-key", "mock-secret", "")))
+		config.WithRegion(os.Getenv("AWS_REGION")),)
 	if err != nil {
 		log.Fatal("AWS Config error", err)
 	}
@@ -68,15 +75,15 @@ func main() {
 	//Initilize file Layer
 	fileRepo := repository.NewPostresFileRepository(db)
 	fileShareRepo := repository.NewPostgresFileShareRepository(db)
-	blobStorage := storage.NewS3Storage(defaultConfig, "my-cloud-bucket", "http://localhost:4566")
+	blobStorage := storage.NewS3Storage(defaultConfig, os.Getenv("AWS_S3_BUCKET_NAME"))
 	fileService := usecase.NewFileService(fileRepo, userRepo, blobStorage, fileShareRepo)
 	fileHandler := handler.NewFileHandler(fileService)
 
 	fileShareService := usecase.NewFileShareService(fileRepo, fileShareRepo, userRepo)
 	fileShareHandler := handler.NewFileShareHandler(fileShareService)
 	// 1. Initialize and boot the asynchronous event consumer loop
-	queueURL := "http://localhost:4566/000000000000/file-upload-queue"
-	uploadWorker := worker.NewUploadWorker(defaultConfig, queueURL, fileService, "http://localhost:4566")
+	queueURL := os.Getenv("AWS_SQS_QUEUE_URL")
+	uploadWorker := worker.NewUploadWorker(defaultConfig, queueURL, fileService)
 
 	// Spin processing off into a separate background thread (Goroutine)
 	go uploadWorker.Start(ctx)
@@ -89,6 +96,7 @@ func main() {
 	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
 	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
 	http.HandleFunc("/file/share", handler.AuthInterceptor(fileShareHandler.NewFileShareRequest))
+	http.HandleFunc("/files",handler.AuthInterceptor(fileHandler.ListFiles))
 
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{

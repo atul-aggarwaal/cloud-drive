@@ -21,12 +21,8 @@ type UploadWorker struct {
 	service   *usecase.FileService
 }
 
-func NewUploadWorker(config aws.Config, queueUrl string, service *usecase.FileService, endpoint string) *UploadWorker {
-	client := sqs.NewFromConfig(config, func(options *sqs.Options) {
-		if endpoint != "" {
-			options.BaseEndpoint = aws.String(endpoint)
-		}
-	})
+func NewUploadWorker(config aws.Config, queueUrl string, service *usecase.FileService) *UploadWorker {
+	client := sqs.NewFromConfig(config,)
 
 	return &UploadWorker{
 		sqsClient: client,
