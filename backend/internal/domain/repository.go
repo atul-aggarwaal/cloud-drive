@@ -20,14 +20,13 @@ type FileRepository interface {
 
 	//Get all files owned by or shared with the user
 	GetFiles(ctx context.Context, userId string) ([]*File, error)
-	
+
 	//Get lateest version of a file by file id
 	GetLatestVersion(ctx context.Context, fileId string) (*FileVersion, error)
-	
+
 	//List all the versions related to a file
-	GetVersions(ctx context.Context, fileId string)([] *FileVersion, error)
+	GetVersions(ctx context.Context, fileId string) ([]*FileVersion, error)
 
 	//Delete metadata related to file present in s3 bucket
-	DeleteFileMetadata(ctx context.Context, fileId string) error
-
+	SoftDeleteFileMetadata(ctx context.Context, fileId string) error
 }

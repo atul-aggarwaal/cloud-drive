@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 )
@@ -125,7 +126,9 @@ func(r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string) 
 func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([]*domain.File, error) {
 	query := `SELECT id, owner_id, file_name, is_folder, created_at, updated_at 
 				FROM files 
-				WHERE owner_id = $1
+				WHERE 
+					owner_id = $1
+				AND deleted_at IS null
 				OR EXISTS(
 							SELECT 1 
 							FROM file_shares 
@@ -152,14 +155,14 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 	return files, nil
 }
 
-func(r *PostgresFileRepository) DeleteFileMetadata(ctx context.Context, fileId string) error{
-	query := `DELETE FROM files WHERE id = $1`
+func(r *PostgresFileRepository) SoftDeleteFileMetadata(ctx context.Context, fileId string) error{
+	query := `UPDATE files SET deleted_at = $1 WHERE id = $2`
 
-	_, err := r.db.ExecContext(ctx, query,fileId)
+	_, err := r.db.ExecContext(ctx, query,time.Now(), fileId)
 	
 
 	if err!=nil{
-		return fmt.Errorf("failed to delete cascade file metadata:  %w",err)
+		return fmt.Errorf("soft delete failed:  %w",err)
 	}
 	return nil
 }

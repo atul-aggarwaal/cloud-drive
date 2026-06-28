@@ -172,15 +172,15 @@ func (s *FileService) DeleteFile(ctx context.Context, userId string, fileId stri
 	// delete all versions from s3 bucket
 	for _, v := range fileVersions {
 		objectKey := fmt.Sprintf("user/%s/%s/%d", file.OwnerID, fileId, v.VersionNum)
-		
+
 		err = s.storage.DeleteObject(ctx, objectKey)
 		if err != nil {
 			return fmt.Errorf("delete s3 object: %w", err)
 		}
 	}
 
-	// delete metadata from local DB
-	err = s.repo.DeleteFileMetadata(ctx, fileId)
+	// soft delete file metadata from db
+	err = s.repo.SoftDeleteFileMetadata(ctx, fileId)
 	if err != nil {
 		return fmt.Errorf("delete file metadata: %w", err)
 	}
