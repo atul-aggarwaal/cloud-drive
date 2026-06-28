@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
@@ -86,6 +87,41 @@ func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId st
 	return &fileVersion, nil
 }
 
+func(r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string) ([]*domain.FileVersion, error){
+	query := `SELECT id, file_id, version_num, file_hash, size, status, created_at FROM file_versions WHERE file_id = $1`
+	rows,err := r.db.QueryContext(ctx, query, fileID)
+
+	if err != nil{
+		return nil, fmt.Errorf("query file versions: %w", err)
+	}
+	defer rows.Close()
+	var fileVersions []*domain.FileVersion
+	
+	for rows.Next(){
+		var fileVersion domain.FileVersion
+
+		err := rows.Scan(
+				&fileVersion.ID, 
+				&fileVersion.FileId, 
+				&fileVersion.VersionNum, 
+				&fileVersion.FileHash, 
+				&fileVersion.Size, 
+				&fileVersion.Status, 
+				&fileVersion.CreatedAt,
+			)
+		if err !=nil{
+			return nil, fmt.Errorf("scanning file versions: %w", err)
+		}
+		fileVersions = append(fileVersions, &fileVersion)
+	}
+
+	if  err:= rows.Err(); err!=nil {
+		return nil, fmt.Errorf("iterating rows error %w", err)
+	}
+
+	return fileVersions, nil
+}
+
 func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([]*domain.File, error) {
 	query := `SELECT id, owner_id, file_name, is_folder, created_at, updated_at 
 				FROM files 
@@ -97,7 +133,7 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 							AND file_shares.shared_with_user_id = $1
 						)`
 	
-						rows, err := r.db.QueryContext(ctx, query, userId)
+	rows, err := r.db.QueryContext(ctx, query, userId)
 	if err != nil {
 		return nil, err
 	}
@@ -114,4 +150,16 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 	}
 	
 	return files, nil
+}
+
+func(r *PostgresFileRepository) DeleteFileMetadata(ctx context.Context, fileId string) error{
+	query := `DELETE FROM files WHERE id = $1`
+
+	_, err := r.db.ExecContext(ctx, query,fileId)
+	
+
+	if err!=nil{
+		return fmt.Errorf("failed to delete cascade file metadata:  %w",err)
+	}
+	return nil
 }

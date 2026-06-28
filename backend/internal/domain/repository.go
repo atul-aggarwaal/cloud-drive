@@ -23,5 +23,11 @@ type FileRepository interface {
 	
 	//Get lateest version of a file by file id
 	GetLatestVersion(ctx context.Context, fileId string) (*FileVersion, error)
+	
+	//List all the versions related to a file
+	GetVersions(ctx context.Context, fileId string)([] *FileVersion, error)
+
+	//Delete metadata related to file present in s3 bucket
+	DeleteFileMetadata(ctx context.Context, fileId string) error
 
 }

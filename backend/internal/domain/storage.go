@@ -16,4 +16,7 @@ type BlobStorage interface {
 		Gemerates a pre-signed download url for a given file
 	*/
 	GenerateDownloadUrl(ctx context.Context, key string, expireIn time.Duration) (string, error)
+
+	//Deletes an object from S3 bucket
+	DeleteObject(ctx context.Context, key string) error
 }

@@ -128,19 +128,62 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userI
 	return downloadUrl, nil
 }
 
-func(s *FileService) ListFilesForUser(ctx context.Context, userId string) ([] *domain.File, error){
-	 log.Printf("executing service method to list files.")
+// Returns list of files Owned or Shared with user
+func (s *FileService) ListFilesForUser(ctx context.Context, userId string) ([]*domain.File, error) {
+	log.Printf("executing service method to list files.")
 
-	 files, error :=s.repo.GetFiles(ctx, userId)
+	files, error := s.repo.GetFiles(ctx, userId)
 
-	 if error !=nil{
-		return nil, fmt.Errorf("failed to list files %w", error)
-	 }
+	if error != nil {
+		return nil, fmt.Errorf("listingFilesForUser: %w", error)
+	}
 
-	 if len(files) == 0{
-		user,err  := s.userRepo.GetUserByID(ctx, userId)
-		if err!=nil {log.Printf("No files found for user {}", user.UserName)}
+	if len(files) == 0 {
+		user, err := s.userRepo.GetUserByID(ctx, userId)
+		if err != nil {
+			log.Printf("No files found for user {%s}", user.UserName)
+		}
 		return nil, nil
-	 }
-	 return files, nil
+	}
+	return files, nil
+}
+
+// service deletes file from S3 bucket and its Metadata from local DB
+func (s *FileService) DeleteFile(ctx context.Context, userId string, fileId string) error {
+	file, err := s.repo.GetFileByID(ctx, fileId)
+	if err != nil {
+		return fmt.Errorf("error retrieving file: %w", err)
+	}
+	if err == nil && file == nil {
+		return fmt.Errorf("file not found %w", err)
+	}
+	if file.OwnerID != userId {
+		return domain.ErrorPermissionDenied
+	}
+
+	fileVersions, err := s.repo.GetVersions(ctx, fileId)
+	if err != nil {
+		return fmt.Errorf("retrieving file versions: %w", err)
+	}
+	if len(fileVersions) == 0 {
+		return fmt.Errorf("cannot delete. no file versions found")
+	}
+
+	// delete all versions from s3 bucket
+	for _, v := range fileVersions {
+		objectKey := fmt.Sprintf("user/%s/%s/%d", file.OwnerID, fileId, v.VersionNum)
+		
+		err = s.storage.DeleteObject(ctx, objectKey)
+		if err != nil {
+			return fmt.Errorf("delete s3 object: %w", err)
+		}
+	}
+
+	// delete metadata from local DB
+	err = s.repo.DeleteFileMetadata(ctx, fileId)
+	if err != nil {
+		return fmt.Errorf("delete file metadata: %w", err)
+	}
+
+	return nil
 }

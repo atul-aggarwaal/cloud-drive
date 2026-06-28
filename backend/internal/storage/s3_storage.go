@@ -64,3 +64,16 @@ func (this *S3Storage) GenerateDownloadUrl(ctx context.Context, key string, expi
 	}
 	return request.URL, nil
 }
+
+func (this *S3Storage) DeleteObject(ctx context.Context, key string) error{
+	_, err :=this.client.DeleteObject(ctx,&s3.DeleteObjectInput{
+		Key: aws.String(key),
+		Bucket: aws.String(this.bucketName),
+	})
+
+	if err != nil{
+		return fmt.Errorf("deletingObject: failed to delete object from S3: %w",err)
+	}
+
+	return nil
+}

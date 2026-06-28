@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
 )
 
@@ -33,13 +34,13 @@ type InitiateUploadRequest struct {
 func (this *FileHandler) HandleInitiateUpload(writer http.ResponseWriter, request *http.Request) {
 	//1. verify HTTP method (only POST allowed)
 	if request.Method != http.MethodPost {
-		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(writer, domain.ErrorMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 
-	userId := request.Context().Value(UserIdKey).(string)
-	if userId == "" {
-		http.Error(writer, "Unauthorized", http.StatusUnauthorized)
+	userId, ok := request.Context().Value(UserIdKey).(string)
+	if !ok || userId == "" {
+		http.Error(writer, domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -91,7 +92,7 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	log.Println("Handling Download File Request")
 	//Make sure it is HTTP GET method
 	if request.Method != http.MethodGet {
-		http.Error(writer, "Method not allowed", http.StatusMethodNotAllowed)
+		http.Error(writer, domain.ErrorMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -113,21 +114,21 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	http.Redirect(writer, request, downloadUrl, http.StatusFound)
 }
 
-func (this * FileHandler) ListFiles(writer http.ResponseWriter, request *http.Request){
+func (this *FileHandler) ListFiles(writer http.ResponseWriter, request *http.Request) {
 
-	if http.MethodGet != request.Method{
+	if http.MethodGet != request.Method {
 		http.Error(writer, "method not allowed ", http.StatusMethodNotAllowed)
 	}
 
 	userId, ok := request.Context().Value(UserIdKey).(string)
 
-	if !ok || userId ==""{
-		http.Error(writer,"Unatuorized user",http.StatusUnauthorized)
+	if !ok || userId == "" {
+		http.Error(writer, domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
 		return
 	}
-	files, error := this.service.ListFilesForUser(request.Context(),userId)
+	files, error := this.service.ListFilesForUser(request.Context(), userId)
 
-	if error!=nil {
+	if error != nil {
 		log.Panic(error)
 		http.Error(writer, "Error retrieving files for user", http.StatusInternalServerError)
 	}
@@ -136,4 +137,31 @@ func (this * FileHandler) ListFiles(writer http.ResponseWriter, request *http.Re
 	writer.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(writer).Encode(files)
+}
+
+func (this *FileHandler) DeleteFile(writer http.ResponseWriter, request *http.Request) {
+	if http.MethodDelete != request.Method {
+		http.Error(writer, domain.ErrorMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	fileId := request.URL.Query().Get("id")
+	if fileId == "" {
+		http.Error(writer, "invalid request: missing file id", http.StatusBadRequest)
+		return
+	}
+
+	userId, ok := request.Context().Value(UserIdKey).(string)
+	if !ok || userId == "" {
+		http.Error(writer, domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	err := this.service.DeleteFile(request.Context(), userId, fileId)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.WriteHeader(http.StatusNoContent)
 }
