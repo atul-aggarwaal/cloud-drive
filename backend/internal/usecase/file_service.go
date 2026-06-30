@@ -148,41 +148,39 @@ func (s *FileService) ListFilesForUser(ctx context.Context, userId string) ([]*d
 	return files, nil
 }
 
-// service deletes file from S3 bucket and its Metadata from local DB
-func (s *FileService) DeleteFile(ctx context.Context, userId string, fileId string) error {
+// marks file for deletion, later to be picked up by a janitor
+func (s *FileService) RequestFileDeletion(ctx context.Context, userId string, fileId string) error {
 	file, err := s.repo.GetFileByID(ctx, fileId)
 	if err != nil {
-		return fmt.Errorf("error retrieving file: %w", err)
+		return fmt.Errorf("get file: %w", err)
 	}
-	if err == nil && file == nil {
-		return fmt.Errorf("file not found %w", err)
-	}
+
 	if file.OwnerID != userId {
 		return domain.ErrorPermissionDenied
 	}
 
 	fileVersions, err := s.repo.GetVersions(ctx, fileId)
 	if err != nil {
-		return fmt.Errorf("retrieving file versions: %w", err)
+		return fmt.Errorf("load versions for file %S: %w", fileId, err)
 	}
 	if len(fileVersions) == 0 {
-		return fmt.Errorf("cannot delete. no file versions found")
+		return fmt.Errorf("file %s has no versions: %w", fileId, domain.ErorFileCorrupted)
 	}
+	/*
+		// delete all versions from s3 bucket
+		for _, v := range fileVersions {
+			objectKey := fmt.Sprintf("user/%s/%s/%d", file.OwnerID, fileId, v.VersionNum)
 
-	// delete all versions from s3 bucket
-	for _, v := range fileVersions {
-		objectKey := fmt.Sprintf("user/%s/%s/%d", file.OwnerID, fileId, v.VersionNum)
-
-		err = s.storage.DeleteObject(ctx, objectKey)
-		if err != nil {
-			return fmt.Errorf("delete s3 object: %w", err)
-		}
-	}
+			err = s.storage.DeleteObject(ctx, objectKey)
+			if err != nil {
+				return fmt.Errorf("delete s3 object: %w", err)
+			}
+		} */
 
 	// soft delete file metadata from db
-	err = s.repo.SoftDeleteFileMetadata(ctx, fileId)
+	err = s.repo.RequestDelete(ctx, userId, fileId)
 	if err != nil {
-		return fmt.Errorf("delete file metadata: %w", err)
+		return fmt.Errorf("mark requested delete: %w", err)
 	}
 
 	return nil

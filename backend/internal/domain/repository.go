@@ -28,5 +28,5 @@ type FileRepository interface {
 	GetVersions(ctx context.Context, fileId string) ([]*FileVersion, error)
 
 	//Delete metadata related to file present in s3 bucket
-	SoftDeleteFileMetadata(ctx context.Context, fileId string) error
+	RequestDelete(ctx context.Context, userId string, fileId string) error
 }

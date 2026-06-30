@@ -62,7 +62,7 @@ func (r *PostgresFileRepository) GetFileByID(ctx context.Context, id string) (*d
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Record not found $v:", err)
-			return nil, nil
+			return nil, domain.ErrorFileNotFound
 		}
 		return nil, err
 	}
@@ -155,10 +155,15 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 	return files, nil
 }
 
-func(r *PostgresFileRepository) SoftDeleteFileMetadata(ctx context.Context, fileId string) error{
-	query := `UPDATE files SET deleted_at = $1 WHERE id = $2`
+func(r *PostgresFileRepository) RequestDelete(ctx context.Context, userId string, fileId string) error{
+	query := `UPDATE files SET 
+								delete_requested_at = $1, 
+								delete_requested_by = $2,
+								lifecycle_status = $3,
+								updated_by = $4
+				WHERE id = $5`
 
-	_, err := r.db.ExecContext(ctx, query,time.Now(), fileId)
+	_, err := r.db.ExecContext(ctx, query,time.Now(), userId, domain.FileStatusDeleteRequested, userId, fileId)
 	
 
 	if err!=nil{

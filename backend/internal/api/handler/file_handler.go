@@ -157,7 +157,7 @@ func (this *FileHandler) DeleteFile(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	err := this.service.DeleteFile(request.Context(), userId, fileId)
+	err := this.service.RequestFileDeletion(request.Context(), userId, fileId)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
