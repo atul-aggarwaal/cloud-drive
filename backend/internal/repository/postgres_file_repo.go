@@ -88,38 +88,37 @@ func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId st
 	return &fileVersion, nil
 }
 
-func(r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string) ([]*domain.FileVersion, error){
+func (r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string) ([]*domain.FileVersion, error) {
 	query := `SELECT id, file_id, version_num, file_hash, size, status, created_at FROM file_versions WHERE file_id = $1`
-	rows,err := r.db.QueryContext(ctx, query, fileID)
+	rows, err := r.db.QueryContext(ctx, query, fileID)
 
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("query file versions: %w", err)
 	}
 	defer rows.Close()
 	var fileVersions []*domain.FileVersion
-	
-	for rows.Next(){
+
+	for rows.Next() {
 		var fileVersion domain.FileVersion
 
 		err := rows.Scan(
-				&fileVersion.ID, 
-				&fileVersion.FileId, 
-				&fileVersion.VersionNum, 
-				&fileVersion.FileHash, 
-				&fileVersion.Size, 
-				&fileVersion.Status, 
-				&fileVersion.CreatedAt,
-			)
-		if err !=nil{
+			&fileVersion.ID,
+			&fileVersion.FileId,
+			&fileVersion.VersionNum,
+			&fileVersion.FileHash,
+			&fileVersion.Size,
+			&fileVersion.Status,
+			&fileVersion.CreatedAt,
+		)
+		if err != nil {
 			return nil, fmt.Errorf("scanning file versions: %w", err)
 		}
 		fileVersions = append(fileVersions, &fileVersion)
 	}
 
-	if  err:= rows.Err(); err!=nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating rows error %w", err)
 	}
-
 	return fileVersions, nil
 }
 
@@ -135,7 +134,7 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 							WHERE file_shares.file_id = files.id 
 							AND file_shares.shared_with_user_id = $1
 						)`
-	
+
 	rows, err := r.db.QueryContext(ctx, query, userId)
 	if err != nil {
 		return nil, err
@@ -151,11 +150,16 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 		}
 		files = append(files, &file)
 	}
-	
+
+	// catch errors if any, occurred during iteration
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
 	return files, nil
 }
 
-func(r *PostgresFileRepository) RequestDelete(ctx context.Context, userId string, fileId string) error{
+func (r *PostgresFileRepository) RequestDelete(ctx context.Context, userId string, fileId string) error {
 	query := `UPDATE files SET 
 								delete_requested_at = $1, 
 								delete_requested_by = $2,
@@ -163,11 +167,74 @@ func(r *PostgresFileRepository) RequestDelete(ctx context.Context, userId string
 								updated_by = $4
 				WHERE id = $5`
 
-	_, err := r.db.ExecContext(ctx, query,time.Now(), userId, domain.FileStatusDeleteRequested, userId, fileId)
-	
+	_, err := r.db.ExecContext(ctx, query, time.Now(), userId, domain.FileStatusDeleteRequested, userId, fileId)
 
-	if err!=nil{
-		return fmt.Errorf("soft delete failed:  %w",err)
+	if err != nil {
+		return fmt.Errorf("soft delete failed:  %w", err)
+	}
+	return nil
+}
+
+func (r *PostgresFileRepository) GetFilesMarkedForDeletion(ctx context.Context) ([]*domain.File, error) {
+	query := `SELECT
+					id,
+					owner_id,
+					file_name,
+					is_folder,
+					created_at,
+					updated_at
+				FROM files
+				WHERE lifecycle_status = $1`
+
+	rows, err := r.db.QueryContext(ctx, query, domain.FileStatusDeleteRequested)
+
+	if err != nil {
+		return nil, err
+	}
+	var files []*domain.File
+	defer rows.Close()
+	for rows.Next() {
+		var file domain.File
+		err := rows.Scan(&file.ID, &file.OwnerID, &file.FileName, &file.IsFolder, &file.CreatedAt, &file.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, &file)
+	}
+
+	// catch errors if any, occurred during iteration
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
+func (r *PostgresFileRepository) DeleteFileVersion(ctx context.Context, versionNum int, fileID string) error {
+	query := `DELETE FROM file_versions 
+					WHERE 
+						 version_num =$1
+					AND	 file_id =$2`
+
+	_, err := r.db.ExecContext(ctx, query, versionNum, fileID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileId string) error {
+	query := `UPDATE files SET 
+								updated_at = $1
+								lifecycle_status = $2,
+				WHERE id = $3`
+
+	_, err := r.db.ExecContext(ctx, query, time.Now(), domain.FileStatusDeleted, fileId)
+
+	if err != nil {
+		return fmt.Errorf("soft delete failed:  %w", err)
 	}
 	return nil
 }

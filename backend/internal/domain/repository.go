@@ -29,4 +29,14 @@ type FileRepository interface {
 
 	//Delete metadata related to file present in s3 bucket
 	RequestDelete(ctx context.Context, userId string, fileId string) error
+
+	//Returns list of files which are marked for deletion
+	GetFilesMarkedForDeletion(ctx context.Context) ([]*File, error)
+
+	//Deletes a specific version of a file
+	DeleteFileVersion(ctx context.Context, versionNum int, fileID string) error
+
+	//Soft delete file
+	MarkFileDeleted(ctx context.Context, fileID string) error
 }
+
