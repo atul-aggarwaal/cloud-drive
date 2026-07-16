@@ -53,7 +53,7 @@ func main() {
 
 	//2. setup aws config for localstack pointing to http://localhost:4566 instead of real AWS
 	err = godotenv.Load("../.env")
-	if err!=nil{
+	if err != nil {
 		log.Println("No .env file found, falling back to system env variables")
 	}
 
@@ -61,7 +61,7 @@ func main() {
 	// from .env file loaded by "os" above and since names AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 	// are standard, it will work.
 	defaultConfig, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(os.Getenv("AWS_REGION")),)
+		config.WithRegion(os.Getenv("AWS_REGION")))
 	if err != nil {
 		log.Fatal("AWS Config error", err)
 	}
@@ -84,7 +84,6 @@ func main() {
 	// 1. Initialize and boot the asynchronous event consumer loop
 	queueURL := os.Getenv("AWS_SQS_QUEUE_URL")
 	uploadWorker := worker.NewUploadWorker(defaultConfig, queueURL, fileService)
-
 	// Spin processing off into a separate background thread (Goroutine)
 	go uploadWorker.Start(ctx)
 
@@ -96,8 +95,17 @@ func main() {
 	http.HandleFunc("/upload/initiate", handler.AuthInterceptor(fileHandler.HandleInitiateUpload))
 	http.HandleFunc("/file/download", handler.AuthInterceptor(fileHandler.DownloadFile))
 	http.HandleFunc("/file/share", handler.AuthInterceptor(fileShareHandler.NewFileShareRequest))
-	http.HandleFunc("/files",handler.AuthInterceptor(fileHandler.ListFiles))
-	http.HandleFunc("/file",handler.AuthInterceptor(fileHandler.DeleteFile))
+	http.HandleFunc("/files", handler.AuthInterceptor(fileHandler.ListFiles))
+	http.HandleFunc("/file", handler.AuthInterceptor(fileHandler.DeleteFile))
+	http.HandleFunc("/janitor", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Starting janitor")
+		if err := worker.NewFileDeletionWorker(fileRepo, blobStorage).RunOnce(r.Context()); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("janitor completed"))
+	})
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{
 		Addr:    ":8081",

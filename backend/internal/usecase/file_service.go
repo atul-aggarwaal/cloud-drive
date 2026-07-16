@@ -166,22 +166,10 @@ func (s *FileService) RequestFileDeletion(ctx context.Context, userId string, fi
 	if len(fileVersions) == 0 {
 		return fmt.Errorf("file %s has no versions: %w", fileId, domain.ErorFileCorrupted)
 	}
-	/*
-		// delete all versions from s3 bucket
-		for _, v := range fileVersions {
-			objectKey := fmt.Sprintf("user/%s/%s/%d", file.OwnerID, fileId, v.VersionNum)
-
-			err = s.storage.DeleteObject(ctx, objectKey)
-			if err != nil {
-				return fmt.Errorf("delete s3 object: %w", err)
-			}
-		} */
-
 	// soft delete file metadata from db
 	err = s.repo.RequestDelete(ctx, userId, fileId)
 	if err != nil {
 		return fmt.Errorf("mark requested delete: %w", err)
 	}
-
 	return nil
 }

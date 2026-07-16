@@ -127,7 +127,7 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 				FROM files 
 				WHERE 
 					owner_id = $1
-				AND deleted_at IS null
+				AND delete_requested_at IS null
 				OR EXISTS(
 							SELECT 1 
 							FROM file_shares 
@@ -162,7 +162,7 @@ func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([
 func (r *PostgresFileRepository) RequestDelete(ctx context.Context, userId string, fileId string) error {
 	query := `UPDATE files SET 
 								delete_requested_at = $1, 
-								delete_requested_by = $2,
+								deleted_requested_by = $2,
 								lifecycle_status = $3,
 								updated_by = $4
 				WHERE id = $5`
@@ -216,25 +216,41 @@ func (r *PostgresFileRepository) DeleteFileVersion(ctx context.Context, versionN
 						 version_num =$1
 					AND	 file_id =$2`
 
-	_, err := r.db.ExecContext(ctx, query, versionNum, fileID)
+	result, err := r.db.ExecContext(ctx, query, versionNum, fileID)
 
-	if err != nil {
+	if err != nil{
 		return err
 	}
 
+	rowsAffected,err := result.RowsAffected()
+	if err!=nil{
+		return fmt.Errorf("soft delete failed %w", err)
+	}
+	if rowsAffected == 0{
+		return fmt.Errorf("soft delete failed: no file %s with version num %d found",fileID, versionNum)
+	}
 	return nil
 }
 
-func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileId string) error {
+func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileID string) error {
 	query := `UPDATE files SET 
-								updated_at = $1
-								lifecycle_status = $2,
+								updated_at = $1,
+								lifecycle_status = $2
 				WHERE id = $3`
 
-	_, err := r.db.ExecContext(ctx, query, time.Now(), domain.FileStatusDeleted, fileId)
+	result, err := r.db.ExecContext(ctx, query, time.Now(), domain.FileStatusDeleted, fileID)
 
-	if err != nil {
+	if err != nil{
 		return fmt.Errorf("soft delete failed:  %w", err)
 	}
+
+	rowsAffected,err := result.RowsAffected()
+	if err!=nil{
+		return fmt.Errorf("soft delete failed %w", err)
+	}
+	if rowsAffected == 0{
+		return fmt.Errorf("soft delete failed: no file found with id=%s",fileID)
+	}
+
 	return nil
 }
