@@ -7,7 +7,8 @@ import (
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 )
-//A periodic worker which will periodically scan files marked as deleted and delete them from s3 bucket along with its file versions metadata
+
+// A periodic worker which will periodically scan files marked as deleted and delete them from s3 bucket along with its file versions metadata
 // if everything is successful, it will mark file as "DELETED"
 type FileDeletionWorker struct {
 	fileRepo domain.FileRepository
@@ -20,6 +21,10 @@ func NewFileDeletionWorker(fileRepo domain.FileRepository, storage domain.BlobSt
 		storage:  storage,
 	}
 }
+func (worker *FileDeletionWorker) Name() string {
+	return "File Deletion Worker"
+}
+
 func (worker *FileDeletionWorker) RunOnce(ctx context.Context) error {
 	// TODO: No concurrency guard. GetFilesMarkedForDeletion selects on
 	// lifecycle_status = DELETE_REQUESTED with no claiming, so two worker

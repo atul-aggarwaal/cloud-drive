@@ -86,6 +86,10 @@ func main() {
 	uploadWorker := worker.NewUploadWorker(defaultConfig, queueURL, fileService)
 	// Spin processing off into a separate background thread (Goroutine)
 	go uploadWorker.Start(ctx)
+	
+	deletionWorker := worker.NewFileDeletionWorker(fileRepo, blobStorage);
+	scheduler := worker.NewScheduler(deletionWorker, time.Minute)
+	go scheduler.Run(ctx)
 
 	//4. Define routes
 	// Public interface like login and new user registration don't require JWT tokens
