@@ -21,7 +21,7 @@ func NewScheduler(runner Runner, interval time.Duration) *Scheduler {
 func (s *Scheduler) Run(ctx context.Context) {
 	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
-	log.Printf("Starting scheduler for runner %s (interval %s)" , s.runner.Name(), ticker )
+	log.Printf("Starting scheduler for runner %s (interval %s)" , s.runner.Name(), s.interval )
 	for {
 		select {
 		case <-ticker.C:
