@@ -175,6 +175,12 @@ func (r *PostgresFileRepository) RequestDelete(ctx context.Context, userId strin
 	return nil
 }
 
+/*
+*
+
+	Retrieve files which are marked for deletion. Pick 50 files at a time and lock them for processing.
+	This is to avoid multiple workers picking up the same file for deletion and skip files which are already locked by another worker.
+*/
 func (r *PostgresFileRepository) GetFilesMarkedForDeletion(ctx context.Context) ([]*domain.File, error) {
 	query := `SELECT
 					id,
@@ -184,7 +190,10 @@ func (r *PostgresFileRepository) GetFilesMarkedForDeletion(ctx context.Context) 
 					created_at,
 					updated_at
 				FROM files
-				WHERE lifecycle_status = $1`
+				WHERE lifecycle_status = $1
+				ORDER BY created_at
+				LIMIT 50
+				FOR UPDATE SKIP LOCKED`
 
 	rows, err := r.db.QueryContext(ctx, query, domain.FileStatusDeleteRequested)
 
@@ -218,16 +227,16 @@ func (r *PostgresFileRepository) DeleteFileVersion(ctx context.Context, versionN
 
 	result, err := r.db.ExecContext(ctx, query, versionNum, fileID)
 
-	if err != nil{
+	if err != nil {
 		return err
 	}
 
-	rowsAffected,err := result.RowsAffected()
-	if err!=nil{
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
 		return fmt.Errorf("soft delete failed %w", err)
 	}
-	if rowsAffected == 0{
-		return fmt.Errorf("soft delete failed: no file %s with version num %d found",fileID, versionNum)
+	if rowsAffected == 0 {
+		return fmt.Errorf("soft delete failed: no file %s with version num %d found", fileID, versionNum)
 	}
 	return nil
 }
@@ -240,16 +249,16 @@ func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileID str
 
 	result, err := r.db.ExecContext(ctx, query, time.Now(), domain.FileStatusDeleted, fileID)
 
-	if err != nil{
+	if err != nil {
 		return fmt.Errorf("soft delete failed:  %w", err)
 	}
 
-	rowsAffected,err := result.RowsAffected()
-	if err!=nil{
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
 		return fmt.Errorf("soft delete failed %w", err)
 	}
-	if rowsAffected == 0{
-		return fmt.Errorf("soft delete failed: no file found with id=%s",fileID)
+	if rowsAffected == 0 {
+		return fmt.Errorf("soft delete failed: no file found with id=%s", fileID)
 	}
 
 	return nil
