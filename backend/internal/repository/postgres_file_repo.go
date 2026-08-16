@@ -219,6 +219,79 @@ func (r *PostgresFileRepository) GetFilesMarkedForDeletion(ctx context.Context) 
 	return files, nil
 }
 
+/*
+*
+
+	Retrieve files which are marked for deletion. Pick 50 files at a time and lock them for processing.
+	This is to avoid multiple workers picking up the same file for deletion and skip files which are already locked by another worker.
+*/
+func (r *PostgresFileRepository) ClaimFilesForDeletion(ctx context.Context, limit int) ([]*domain.File, error) {
+
+	transaction, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+
+	defer transaction.Rollback() // Rollback the transaction if not committed
+
+	query := `SELECT
+					id,
+					owner_id,
+					file_name,
+					is_folder,
+					created_at,
+					updated_at
+				FROM files
+				WHERE lifecycle_status = $1
+				ORDER BY created_at
+				LIMIT $2
+				FOR UPDATE SKIP LOCKED`
+
+	rows, err := transaction.QueryContext(ctx, query, domain.FileStatusDeleteRequested, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var files []*domain.File
+	for rows.Next() {
+		var file domain.File
+		err := rows.Scan(
+			&file.ID,
+			&file.OwnerID,
+			&file.FileName,
+			&file.IsFolder,
+			&file.CreatedAt,
+			&file.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, &file)
+	}
+	// catch errors if any, occurred during iteration
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Update the lifecycle_status of the claimed files to "DELETING"
+	for _, file := range files {
+		updateQuery := `UPDATE files SET lifecycle_status = $1, updated_at = $2 WHERE id= $3`
+
+		_, err := transaction.ExecContext(ctx, updateQuery, domain.FileStatusDeleting, time.Now(), file.ID)
+		if err != nil {
+			return nil, fmt.Errorf("claiming file %s for DELETING: %w", file.ID, err)
+		}
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+
+	return files, nil
+}
+
 func (r *PostgresFileRepository) DeleteFileVersion(ctx context.Context, versionNum int, fileID string) error {
 	query := `DELETE FROM file_versions 
 					WHERE 

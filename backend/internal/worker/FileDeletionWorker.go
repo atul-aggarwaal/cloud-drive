@@ -26,12 +26,7 @@ func (worker *FileDeletionWorker) Name() string {
 }
 
 func (worker *FileDeletionWorker) RunOnce(ctx context.Context) error {
-	// TODO: No concurrency guard. GetFilesMarkedForDeletion selects on
-	// lifecycle_status = DELETE_REQUESTED with no claiming, so two worker
-	// instances (or overlapping ticks) can process the same file. Idempotency
-	// keeps state correct, but we double work. Claim rows (SELECT ... FOR UPDATE
-	// SKIP LOCKED, or flip to an intermediate DELETING status) before processing.
-	filesToDelete, err := worker.fileRepo.GetFilesMarkedForDeletion(ctx)
+	filesToDelete, err := worker.fileRepo.ClaimFilesForDeletion(ctx, 50)
 
 	log.Printf("files found for deletion: %d", len(filesToDelete))
 	if err != nil {

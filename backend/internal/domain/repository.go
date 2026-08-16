@@ -33,10 +33,12 @@ type FileRepository interface {
 	//Returns list of files which are marked for deletion
 	GetFilesMarkedForDeletion(ctx context.Context) ([]*File, error)
 
+	//Claim set of limited files for deletion
+	ClaimFilesForDeletion(ctx context.Context, limit int) ([]*File, error)
+
 	//Deletes a specific version of a file
 	DeleteFileVersion(ctx context.Context, versionNum int, fileID string) error
 
 	//Soft delete file
 	MarkFileDeleted(ctx context.Context, fileID string) error
 }
-
