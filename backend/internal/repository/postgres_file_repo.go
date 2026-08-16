@@ -234,20 +234,28 @@ func (r *PostgresFileRepository) ClaimFilesForDeletion(ctx context.Context, limi
 
 	defer transaction.Rollback() // Rollback the transaction if not committed
 
-	query := `SELECT
-					id,
-					owner_id,
-					file_name,
-					is_folder,
-					created_at,
-					updated_at
-				FROM files
-				WHERE lifecycle_status = $1
-				ORDER BY created_at
-				LIMIT $2
-				FOR UPDATE SKIP LOCKED`
+	query := `WITH claimed AS (
+					SELECT
+						id,
+						owner_id,
+						file_name,
+						is_folder,
+						created_at,
+						updated_at
+					FROM files
+					WHERE lifecycle_status = $1
+					ORDER BY created_at
+					LIMIT $2
+					FOR UPDATE SKIP LOCKED
+				)
+				UPDATE files f
+				SET lifecycle_status = $3,
+					updated_at = NOW()
+				FROM claimed c
+				where f.id = c.id
+				RETURNING f.*`
 
-	rows, err := transaction.QueryContext(ctx, query, domain.FileStatusDeleteRequested, limit)
+	rows, err := transaction.QueryContext(ctx, query, domain.FileStatusDeleteRequested, limit,domain.FileStatusDeleting)
 	if err != nil {
 		return nil, err
 	}
@@ -273,16 +281,6 @@ func (r *PostgresFileRepository) ClaimFilesForDeletion(ctx context.Context, limi
 	// catch errors if any, occurred during iteration
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	// Update the lifecycle_status of the claimed files to "DELETING"
-	for _, file := range files {
-		updateQuery := `UPDATE files SET lifecycle_status = $1, updated_at = $2 WHERE id= $3`
-
-		_, err := transaction.ExecContext(ctx, updateQuery, domain.FileStatusDeleting, time.Now(), file.ID)
-		if err != nil {
-			return nil, fmt.Errorf("claiming file %s for DELETING: %w", file.ID, err)
-		}
 	}
 
 	if err := transaction.Commit(); err != nil {
