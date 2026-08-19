@@ -42,10 +42,14 @@ func (r *PostgresFileRepository) CreateVersion(ctx context.Context, fileVersion 
 }
 
 // UpdateVersionStatus updates the upload status of a file.
-func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId string, versionNum int, status string) error {
-	query := `UPDATE file_versions SET status = $1 WHERE file_id = $2 AND version_num = $3`
+func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error {
+	query := `UPDATE file_versions 
+			SET status = $1 
+			WHERE file_id = $2 
+			AND version_num = $3
+			AND status = $4`
 
-	_, err := r.db.ExecContext(ctx, query, status, fileId, versionNum)
+	_, err := r.db.ExecContext(ctx, query, newStatus, fileId, versionNum, expectedStatus)
 
 	return err
 }

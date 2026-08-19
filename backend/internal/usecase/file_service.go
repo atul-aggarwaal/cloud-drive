@@ -77,7 +77,7 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 // CompleteUpload marks a file upload as complete.
 func (s *FileService) CompleteUpload(ctx context.Context, fileId string, versionNum int) error {
 	log.Printf("File Service] Completing upload for file ID :%s", fileId)
-	return s.repo.UpdateVersionStatus(ctx, fileId, versionNum, "AVAILABLE")
+	return s.repo.UpdateVersionStatus(ctx, fileId, versionNum, domain.FileStatusPending, domain.FileStatusAvailable)
 }
 
 // InitiateDownload validates if a file is available for download and accordingly generates a presigned URL with 15 minute expiry.
