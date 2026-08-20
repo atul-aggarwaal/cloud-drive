@@ -54,13 +54,13 @@ func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId
 		return err
 	}
 
-	rowsEffected, err :=result.RowsAffected()
+	rowsAffected, err :=result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("updating version status failed: %w", err)
 	}
 
-	//Assumption : Status was already updated by another worker.
-	if rowsEffected == 0{
+	//No File record matched with current requirement of status, version and file id. Thus, no transition happened.
+	if rowsAffected == 0{
 		log.Printf("No rows updated for fileId=%s, versionNum=%d, expectedStatus=%s, newStatus=%s", fileId, versionNum, expectedStatus, newStatus)
 	}
 	return nil
