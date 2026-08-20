@@ -49,9 +49,21 @@ func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId
 			AND version_num = $3
 			AND status = $4`
 
-	_, err := r.db.ExecContext(ctx, query, newStatus, fileId, versionNum, expectedStatus)
+	result, err := r.db.ExecContext(ctx, query, newStatus, fileId, versionNum, expectedStatus)
+	if err != nil {
+		return err
+	}
 
-	return err
+	rowsEffected, err :=result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("updating version status failed: %w", err)
+	}
+
+	//Assumption : Status was already updated by another worker.
+	if rowsEffected == 0{
+		log.Printf("No rows updated for fileId=%s, versionNum=%d, expectedStatus=%s, newStatus=%s", fileId, versionNum, expectedStatus, newStatus)
+	}
+	return nil
 }
 
 // GetFileByID retrieves a file metadata record by its ID.
