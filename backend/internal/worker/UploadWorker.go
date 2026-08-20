@@ -56,7 +56,10 @@ func (this *UploadWorker) Start(ctx context.Context) {
 				log.Println("No Message Received yet from SQS queue.")
 			}
 			for _, message := range output.Messages {
-				this.processMessage(ctx, message)
+				error :=this.processMessage(ctx, message)
+				if error != nil{
+					log.Printf("processed sqs message: %v", error)
+				}
 			}
 		}
 	}
@@ -68,7 +71,7 @@ func (this *UploadWorker) processMessage(ctx context.Context, message types.Mess
 			Object struct {
 				Key string `json:"key"`
 			} `json:"object"`
-		} `json:"s3"`
+		} `json:"s3"`	
 	}
 	type S3Event struct {
 		Records []S3Record `json:"Records"`
