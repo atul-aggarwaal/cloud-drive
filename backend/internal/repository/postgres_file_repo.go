@@ -41,8 +41,8 @@ func (r *PostgresFileRepository) CreateVersion(ctx context.Context, fileVersion 
 	return err
 }
 
-// UpdateVersionStatus updates the upload status of a file.
-func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error {
+// UpdateVersionStatus updates the upload status of a file version.
+func (r *PostgresFileRepository) UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error {
 	query := `UPDATE file_versions 
 			SET status = $1 
 			WHERE file_id = $2 
@@ -62,6 +62,29 @@ func (r *PostgresFileRepository) UpdateVersionStatus(ctx context.Context, fileId
 	//No File record matched with current requirement of status, version and file id. Thus, no transition happened.
 	if rowsAffected == 0{
 		log.Printf("No rows updated for fileId=%s, versionNum=%d, expectedStatus=%s, newStatus=%s", fileId, versionNum, expectedStatus, newStatus)
+	}
+	return nil
+}
+// updates the upload status of a file.
+func (r *PostgresFileRepository) UpdateFileStatus(ctx context.Context, fileId string, expectedStatus string, newStatus string) error {
+	query := `UPDATE files 
+			SET status = $1 
+			WHERE file_id = $2 
+			AND status = $4`
+
+	result, err := r.db.ExecContext(ctx, query, newStatus, fileId, expectedStatus)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err :=result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("updating file status failed: %w", err)
+	}
+
+	//No File record matched with current requirement of status, version and file id. Thus, no transition happened.
+	if rowsAffected == 0{
+		log.Printf("No rows updated for fileId=%s,expectedStatus=%s, newStatus=%s", fileId, expectedStatus, newStatus)
 	}
 	return nil
 }

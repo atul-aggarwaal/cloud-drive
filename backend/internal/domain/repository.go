@@ -13,7 +13,10 @@ type FileRepository interface {
 	CreateVersion(ctx context.Context, fileVersion *FileVersion) error
 
 	// Updates the upload status of a file to its current version
-	UpdateVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error
+	UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error
+
+	// Updates the upload status of a file to its current version
+	UpdateFileStatus(ctx context.Context, fileId string, expectedStatus string, newStatus string) error
 
 	// GetFileByID retrieves a file metadata record by its ID.
 	GetFileByID(ctx context.Context, id string) (*File, error)

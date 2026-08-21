@@ -27,21 +27,20 @@ func (worker *FileDeletionWorker) Name() string {
 
 func (worker *FileDeletionWorker) RunOnce(ctx context.Context) error {
 	filesToDelete, err := worker.fileRepo.ClaimFilesForDeletion(ctx, 50)
-
-	log.Printf("files found for deletion: %d", len(filesToDelete))
 	if err != nil {
 		return fmt.Errorf("loading files marked for deletion: %w", err)
 	}
-
+	
+	log.Printf("files found for deletion: %d", len(filesToDelete))
 	for _, file := range filesToDelete {
 		log.Printf("processing file: %s", file.FileName)
-		if err := worker.processFile(ctx, file); err != nil {
-			// TODO: No retry ceiling / dead-letter. A version whose S3 delete
-			// genuinely errors (e.g. IAM change) keeps this file in
-			// DELETE_REQUESTED forever, reprocessed every cycle with no alerting.
-			// Add an attempt counter and a terminal FAILED status.
+		if processErr := worker.processFile(ctx, file); processErr != nil {
+			err := processErr
+			if statusErr := worker.fileRepo.UpdateFileStatus(ctx, file.ID, domain.FileStatusDeleteRequested, domain.FileStatusDeleting); statusErr != nil {
+				err = fmt.Errorf("%w; also failed to revert status: %w", processErr, statusErr)
+			}
 			log.Printf(
-				"failed processing file id=%s name=%s: %v",
+				"file deletion process failed for file id=%s name=%s : %v",
 				file.ID,
 				file.FileName,
 				err,
