@@ -36,7 +36,7 @@ func (worker *FileDeletionWorker) RunOnce(ctx context.Context) error {
 		log.Printf("processing file: %s", file.FileName)
 		if processErr := worker.processFile(ctx, file); processErr != nil {
 			err := processErr
-			if statusErr := worker.fileRepo.UpdateFileStatus(ctx, file.ID, domain.FileStatusDeleteRequested, domain.FileStatusDeleting); statusErr != nil {
+			if statusErr := worker.fileRepo.UpdateFileStatus(ctx, file.ID, domain.FileStatusDeleting, domain.FileStatusDeleteRequested); statusErr != nil {
 				err = fmt.Errorf("%w; also failed to revert status: %w", processErr, statusErr)
 			}
 			log.Printf(
