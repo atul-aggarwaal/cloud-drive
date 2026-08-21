@@ -103,6 +103,7 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 
 	if fileId == "" || userId == "" {
 		http.Error(writer, "Invalid request", http.StatusBadRequest)
+		return
 	}
 
 	downloadUrl, err := this.service.InitiateDownload(request.Context(), fileId, userId)
