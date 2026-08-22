@@ -66,7 +66,7 @@ func (r *PostgresFileRepository) CreateVersion(ctx context.Context, tx *sql.Tx, 
 }
 
 // CreateVersion inserts a new file version record into the database.
-func (r *PostgresFileRepository) CreateNewVersion(ctx context.Context, fileVersion *domain.FileVersion) error {
+func (r *PostgresFileRepository) CreateNewFileVersion(ctx context.Context, fileVersion *domain.FileVersion) error {
 	query := `INSERT INTO file_versions( file_id, version_num, file_hash, size, status, created_at)
 			VALUES ($1, $2, $3, $4, $5, NOW())` //version Id is auto increment bigserial
 

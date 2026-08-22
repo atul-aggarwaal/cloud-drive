@@ -10,6 +10,8 @@ type FileRepository interface {
 	//Create initial version of file with its metadata and version metadata in a single transaction
 	CreateFileWithInitialVersion(ctx context.Context, file *File, fileVersion *FileVersion) error
 
+	CreateNewFileVersion(ctx context.Context, fileVersion *FileVersion) error
+
 	// Updates the upload status of a file to its current version
 	UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error
 

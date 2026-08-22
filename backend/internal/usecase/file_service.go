@@ -48,8 +48,8 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 	new_version := 1
 	if existingFile != nil {
 		lastVersion, err := s.repo.GetLatestVersion(ctx, existingFile.ID)
-		if err != nil{
-			return nil, "", fmt.Errorf("reteriving existing version: %w",err)
+		if err != nil {
+			return nil, "", fmt.Errorf("reteriving existing version: %w", err)
 		}
 		new_version = lastVersion.VersionNum + 1
 		fileId = existingFile.ID
@@ -80,14 +80,14 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 	}
 
 	if existingFile != nil {
-		if err := s.repo.CreateNewVersion(ctx, fileVersion); err != nil {
-				return nil, "", fmt.Errorf("error while creating new file version: %w", err)
+		if err := s.repo.CreateNewFileVersion(ctx, fileVersion); err != nil {
+			return nil, "", fmt.Errorf("error while creating new file version: %w", err)
 		}
-	}else{
-	if err := s.repo.CreateFileWithInitialVersion(ctx, file, fileVersion); err != nil {
-		return nil, "", fmt.Errorf("error while creating first file version: %w", err)
+	} else {
+		if err := s.repo.CreateFileWithInitialVersion(ctx, file, fileVersion); err != nil {
+			return nil, "", fmt.Errorf("error while creating first file version: %w", err)
+		}
 	}
-
 	return file, presignedURL, nil
 }
 
