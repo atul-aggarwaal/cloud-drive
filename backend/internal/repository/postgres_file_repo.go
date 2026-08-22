@@ -94,7 +94,7 @@ func (r *PostgresFileRepository) UpdateFileStatus(ctx context.Context, fileId st
 	query := `UPDATE files 
 			SET lifecycle_status = $1 
 			WHERE id = $2 
-			AND lifecycle_status = $4`
+			AND lifecycle_status = $3`
 
 	result, err := r.db.ExecContext(ctx, query, newStatus, fileId, expectedStatus)
 	if err != nil {
