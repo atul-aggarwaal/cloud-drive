@@ -101,15 +101,7 @@ func main() {
 	http.HandleFunc("/file/share", handler.AuthInterceptor(fileShareHandler.NewFileShareRequest))
 	http.HandleFunc("/files", handler.AuthInterceptor(fileHandler.ListFiles))
 	http.HandleFunc("/file", handler.AuthInterceptor(fileHandler.DeleteFile))
-	/* http.HandleFunc("/janitor", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Starting janitor")
-		if err := worker.NewFileDeletionWorker(fileRepo, blobStorage).RunOnce(r.Context()); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("janitor completed"))
-	}) */
+
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{
 		Addr:    ":8081",

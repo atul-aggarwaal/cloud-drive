@@ -40,6 +40,20 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 		return nil, "", fmt.Errorf("file owner validation failed: %w", err)
 	}
 
+	existingFile, err := s.repo.GetFileFileByOwnerIdNameAndStatus(ctx, ownerId, fileName, domain.FileStatusActive)
+	if err != nil {
+		return nil, "", fmt.Errorf("retreiving existing file: %w ", err)
+	}
+
+	new_version := 1
+	if existingFile != nil {
+		lastVersion, err := s.repo.GetLatestVersion(ctx, existingFile.ID)
+		if err != nil{
+			return nil, "", fmt.Errorf("reteriving existing version: %w",err)
+		}
+		new_version = lastVersion.VersionNum + 1
+	}
+
 	//Create Metadata for File
 	file := &domain.File{
 		ID:       fileId,
@@ -51,14 +65,14 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 	//Create Metadata for FileVersion
 	fileVersion := &domain.FileVersion{
 		FileId:     fileId,
-		VersionNum: 1, // Static for new file
+		VersionNum: new_version, // Static for new file
 		FileHash:   fileHash,
 		Size:       fileSize,
 		Status:     "PENDING",
 	}
 
 	// Construct S3 path: user/<user_id>/<file_id>/<version_num>
-	objectKey := fmt.Sprintf("user/%s/%s/v1", ownerId, fileId)
+	objectKey := fmt.Sprintf("user/%s/%s/%d", ownerId, fileId, new_version)
 	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, fileHash, 15*time.Minute)
 	if err != nil {
 		return nil, "", fmt.Errorf("generating upload url: %w", err)

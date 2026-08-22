@@ -397,3 +397,34 @@ func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileID str
 
 	return nil
 }
+
+func (r *PostgresFileRepository) GetFileFileByOwnerIdNameAndStatus(ctx context.Context, ownerId string, fileName string, status string) (*domain.File, error){
+
+query := `SELECT 
+				id, 
+				owner_id, 
+				file_name, 
+				is_folder, 
+				created_at, 
+				updated_at 
+			FROM files 
+			WHERE owner_id = $1 
+			AND file_name = $2 
+			AND lifecycle_status = $3`
+
+	row := r.db.QueryRowContext(ctx, query, ownerId, fileName, status)
+	
+	var file domain.File
+	err := row.Scan(
+		&file.ID,
+		&file.OwnerID,
+		&file.FileName,
+		&file.IsFolder,
+		&file.CreatedAt,
+		&file.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &file, nil
+}

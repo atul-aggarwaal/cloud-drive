@@ -42,4 +42,6 @@ type FileRepository interface {
 
 	//Soft delete file
 	MarkFileDeleted(ctx context.Context, fileID string) error
+
+	GetFileFileByOwnerIdNameAndStatus(ctx context.Context, ownerId string, fileName string, status string) (*File, error)
 }
