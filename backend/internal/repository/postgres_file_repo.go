@@ -92,9 +92,9 @@ func (r *PostgresFileRepository) UpdateFileVersionStatus(ctx context.Context, fi
 // updates the upload status of a file.
 func (r *PostgresFileRepository) UpdateFileStatus(ctx context.Context, fileId string, expectedStatus string, newStatus string) error {
 	query := `UPDATE files 
-			SET status = $1 
-			WHERE file_id = $2 
-			AND status = $4`
+			SET lifecycle_status = $1 
+			WHERE id = $2 
+			AND lifecycle_status = $4`
 
 	result, err := r.db.ExecContext(ctx, query, newStatus, fileId, expectedStatus)
 	if err != nil {
