@@ -1,3 +1,3 @@
 ALTER TABLE file_versions 
-ADD CONSTRAINT fk_unique_file_version 
+ADD CONSTRAINT uq_file_versions_file_id_version_num 
 UNIQUE (file_id, version_num);

@@ -1,2 +1,2 @@
 ALTER TABLE file_versions 
-DROP CONSTRAINT fk_unique_file_version;
+DROP CONSTRAINT uq_file_versions_file_id_version_num;
