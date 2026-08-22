@@ -65,6 +65,15 @@ func (r *PostgresFileRepository) CreateVersion(ctx context.Context, tx *sql.Tx, 
 	return err
 }
 
+// CreateVersion inserts a new file version record into the database.
+func (r *PostgresFileRepository) CreateNewVersion(ctx context.Context, fileVersion *domain.FileVersion) error {
+	query := `INSERT INTO file_versions( file_id, version_num, file_hash, size, status, created_at)
+			VALUES ($1, $2, $3, $4, $5, NOW())` //version Id is auto increment bigserial
+
+	_, err := r.db.ExecContext(ctx, query, fileVersion.FileId, fileVersion.VersionNum, fileVersion.FileHash, fileVersion.Size, fileVersion.Status)
+
+	return err
+}
 // UpdateVersionStatus updates the upload status of a file version.
 func (r *PostgresFileRepository) UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error {
 	query := `UPDATE file_versions 
@@ -423,7 +432,11 @@ query := `SELECT
 		&file.CreatedAt,
 		&file.UpdatedAt,
 	)
+
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) { //FIle doesn't exist for current combination of owner, filename and status.
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &file, nil
