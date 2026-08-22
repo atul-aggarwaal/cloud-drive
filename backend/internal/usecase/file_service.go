@@ -35,20 +35,17 @@ func NewFileService(repo domain.FileRepository, userRepo domain.UserRepository, 
 func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileName string, fileHash string, fileSize int64) (*domain.File, string, error) {
 	fileId := uuid.New().String()
 
+	user, err := s.userRepo.GetUserByID(ctx, ownerId)
+	if user == nil {
+		return nil, "", fmt.Errorf("file owner validation failed: %w", err)
+	}
+	
 	//Create Metadata for File
 	file := &domain.File{
 		ID:       fileId,
 		OwnerID:  ownerId,
 		FileName: fileName,
 		IsFolder: false,
-	}
-	user, err := s.userRepo.GetUserByID(ctx, ownerId)
-	if user == nil {
-		return nil, "", fmt.Errorf("file owner validation failed: %w", err)
-	}
-
-	if err := s.repo.CreateFile(ctx, file); err != nil {
-		return nil, "", fmt.Errorf("error while creating file: %w", err)
 	}
 
 	//Create Metadata for FileVersion
@@ -59,7 +56,8 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 		Size:       fileSize,
 		Status:     "PENDING",
 	}
-	if err := s.repo.CreateVersion(ctx, fileVersion); err != nil {
+	
+	if err := s.repo.CreateFileWithInitialVersion(ctx, file, fileVersion); err != nil {
 		return nil, "", fmt.Errorf("error while creating first file version: %w", err)
 	}
 

@@ -22,21 +22,45 @@ func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 	return &PostgresFileRepository{db: db}
 }
 
+//creates initial file and its first version in a single transaction. This is to ensure that both file and its first version are created together or none at all.
+func (r *PostgresFileRepository) CreateFileWithInitialVersion(ctx context.Context, file *domain.File, fileVersion *domain.FileVersion) error {
+
+	tx, err :=r.db.BeginTx(ctx,nil)
+
+	if err!=nil{
+		return fmt.Errorf("starting db transaction: %w",err)
+	}
+
+	err = r.CreateFile(ctx, tx, file)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("creating file: %w", err)
+	}
+
+	err = r.CreateVersion(ctx, tx, fileVersion)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("creating file version: %w", err)
+	}
+
+	return tx.Commit()
+}
+
 // CreateFile inserts a new file metadata record into the database.
-func (r *PostgresFileRepository) CreateFile(ctx context.Context, file *domain.File) error {
+func (r *PostgresFileRepository) CreateFile(ctx context.Context, tx *sql.Tx, file *domain.File) error {
 	query := `INSERT INTO files(id, owner_id, file_name, is_folder, created_at, updated_at) 
 			VALUES($1, $2, $3, $4, NOW(), NOW())` //Set create and update time as now.
-	_, err := r.db.ExecContext(ctx, query, file.ID, file.OwnerID, file.FileName, file.IsFolder)
+	_, err := tx.ExecContext(ctx, query, file.ID, file.OwnerID, file.FileName, file.IsFolder)
 
 	return err
 }
 
 // CreateVersion inserts a new file version record into the database.
-func (r *PostgresFileRepository) CreateVersion(ctx context.Context, fileVersion *domain.FileVersion) error {
+func (r *PostgresFileRepository) CreateVersion(ctx context.Context, tx *sql.Tx, fileVersion *domain.FileVersion) error {
 	query := `INSERT INTO file_versions( file_id, version_num, file_hash, size, status, created_at)
 			VALUES ($1, $2, $3, $4, $5, NOW())` //version Id is auto increment bigserial
 
-	_, err := r.db.ExecContext(ctx, query, fileVersion.FileId, fileVersion.VersionNum, fileVersion.FileHash, fileVersion.Size, fileVersion.Status)
+	_, err := tx.ExecContext(ctx, query, fileVersion.FileId, fileVersion.VersionNum, fileVersion.FileHash, fileVersion.Size, fileVersion.Status)
 
 	return err
 }
