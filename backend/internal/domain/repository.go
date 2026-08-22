@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"database/sql"
 )
 
 // FileRepository defines the "Contract" for any database implementation.
@@ -10,12 +9,6 @@ type FileRepository interface {
 
 	//Create initial version of file with its metadata and version metadata in a single transaction
 	CreateFileWithInitialVersion(ctx context.Context, file *File, fileVersion *FileVersion) error
-	
-	// CreateFile inserts a new file metadata record into the database.
-	CreateFile(ctx context.Context, tx *sql.Tx, file *File) error
-
-	//CreateVersion inserts a new file version record into the database.
-	CreateVersion(ctx context.Context, tx *sql.Tx, fileVersion *FileVersion) error
 
 	// Updates the upload status of a file to its current version
 	UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error

@@ -39,7 +39,7 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 	if user == nil {
 		return nil, "", fmt.Errorf("file owner validation failed: %w", err)
 	}
-	
+
 	//Create Metadata for File
 	file := &domain.File{
 		ID:       fileId,
@@ -56,17 +56,16 @@ func (s *FileService) InitiateUpload(ctx context.Context, ownerId string, fileNa
 		Size:       fileSize,
 		Status:     "PENDING",
 	}
-	
-	if err := s.repo.CreateFileWithInitialVersion(ctx, file, fileVersion); err != nil {
-		return nil, "", fmt.Errorf("error while creating first file version: %w", err)
-	}
 
 	// Construct S3 path: user/<user_id>/<file_id>/<version_num>
 	objectKey := fmt.Sprintf("user/%s/%s/v1", ownerId, fileId)
 	presignedURL, err := s.storage.GenerateUploadUrl(ctx, objectKey, fileHash, 15*time.Minute)
-
 	if err != nil {
-		return nil, "", fmt.Errorf("storage provider error: %w", err)
+		return nil, "", fmt.Errorf("generating upload url: %w", err)
+	}
+
+	if err := s.repo.CreateFileWithInitialVersion(ctx, file, fileVersion); err != nil {
+		return nil, "", fmt.Errorf("error while creating first file version: %w", err)
 	}
 
 	return file, presignedURL, nil
