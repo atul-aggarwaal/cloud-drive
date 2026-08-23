@@ -161,7 +161,16 @@ func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId st
 }
 
 func (r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string) ([]*domain.FileVersion, error) {
-	query := `SELECT id, file_id, version_num, file_hash, size, status, created_at FROM file_versions WHERE file_id = $1`
+	query := `SELECT 
+					id, 
+					file_id, 
+					version_num, 
+					file_hash, 
+					size, 
+					status, 
+					created_at 
+				FROM file_versions 
+				WHERE file_id = $1`
 	rows, err := r.db.QueryContext(ctx, query, fileID)
 
 	if err != nil {

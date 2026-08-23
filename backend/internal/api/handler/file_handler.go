@@ -166,3 +166,27 @@ func (this *FileHandler) DeleteFile(writer http.ResponseWriter, request *http.Re
 
 	writer.WriteHeader(http.StatusNoContent)
 }
+
+func (this *FileHandler) ListFileVersions(writer http.ResponseWriter, request *http.Request) {
+	if http.MethodGet != request.Method {
+		http.Error(writer, domain.ErrorMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	userId, ok := request.Context().Value(UserIdKey).(string)
+	if !ok || userId ==""{
+		http.Error(writer,domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
+	}
+	
+	fileId := request.PathValue("fileId")
+	fileVersions, err:=this.service.ListFileVersionsForUser(request.Context(), userId, fileId)
+	if err != nil{
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type","application/json")
+	writer.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(writer).Encode(fileVersions)
+}

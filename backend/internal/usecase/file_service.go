@@ -20,6 +20,19 @@ type FileService struct {
 	fileShareRepo domain.FileShareRepository
 }
 
+//List all versions of a file for a user
+func (s *FileService) ListFileVersionsForUser(context context.Context, userId string, fileId string) ([]*domain.FileVersion, error){
+	file, err := s.repo.GetFileByID(context, fileId)
+	if err != nil {
+		return nil,fmt.Errorf("get file: %w", err)
+	}
+	if file.OwnerID != userId {
+		return nil, domain.ErrorPermissionDenied
+	}
+
+	return s.repo.GetVersions(context, fileId)
+}
+
 // NewFileService creates a new instance of FileService.
 func NewFileService(repo domain.FileRepository, userRepo domain.UserRepository, storage domain.BlobStorage, fileShareRepo domain.FileShareRepository) *FileService {
 	return &FileService{
