@@ -170,7 +170,8 @@ func (r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string)
 					status, 
 					created_at 
 				FROM file_versions 
-				WHERE file_id = $1`
+				WHERE file_id = $1
+				ORDER BY version_num DESC`
 	rows, err := r.db.QueryContext(ctx, query, fileID)
 
 	if err != nil {

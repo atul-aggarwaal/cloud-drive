@@ -176,6 +176,7 @@ func (this *FileHandler) ListFileVersions(writer http.ResponseWriter, request *h
 	userId, ok := request.Context().Value(UserIdKey).(string)
 	if !ok || userId ==""{
 		http.Error(writer,domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
+		return
 	}
 	
 	fileId := request.PathValue("fileId")
