@@ -22,13 +22,13 @@ func NewPostresFileRepository(db *sql.DB) *PostgresFileRepository {
 	return &PostgresFileRepository{db: db}
 }
 
-//creates initial file and its first version in a single transaction. This is to ensure that both file and its first version are created together or none at all.
+// creates initial file and its first version in a single transaction. This is to ensure that both file and its first version are created together or none at all.
 func (r *PostgresFileRepository) CreateFileWithInitialVersion(ctx context.Context, file *domain.File, fileVersion *domain.FileVersion) error {
 
-	tx, err :=r.db.BeginTx(ctx,nil)
+	tx, err := r.db.BeginTx(ctx, nil)
 
-	if err!=nil{
-		return fmt.Errorf("starting db transaction: %w",err)
+	if err != nil {
+		return fmt.Errorf("starting db transaction: %w", err)
 	}
 
 	err = r.CreateFile(ctx, tx, file)
@@ -74,6 +74,7 @@ func (r *PostgresFileRepository) CreateNewFileVersion(ctx context.Context, fileV
 
 	return err
 }
+
 // UpdateVersionStatus updates the upload status of a file version.
 func (r *PostgresFileRepository) UpdateFileVersionStatus(ctx context.Context, fileId string, versionNum int, expectedStatus string, newStatus string) error {
 	query := `UPDATE file_versions 
@@ -87,17 +88,18 @@ func (r *PostgresFileRepository) UpdateFileVersionStatus(ctx context.Context, fi
 		return err
 	}
 
-	rowsAffected, err :=result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("updating version status failed: %w", err)
 	}
 
 	//No File record matched with current requirement of status, version and file id. Thus, no transition happened.
-	if rowsAffected == 0{
+	if rowsAffected == 0 {
 		log.Printf("No rows updated for fileId=%s, versionNum=%d, expectedStatus=%s, newStatus=%s", fileId, versionNum, expectedStatus, newStatus)
 	}
 	return nil
 }
+
 // updates the upload status of a file.
 func (r *PostgresFileRepository) UpdateFileStatus(ctx context.Context, fileId string, expectedStatus string, newStatus string) error {
 	query := `UPDATE files 
@@ -110,13 +112,13 @@ func (r *PostgresFileRepository) UpdateFileStatus(ctx context.Context, fileId st
 		return err
 	}
 
-	rowsAffected, err :=result.RowsAffected()
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("updating file status failed: %w", err)
 	}
 
 	//No File record matched with current requirement of status, version and file id. Thus, no transition happened.
-	if rowsAffected == 0{
+	if rowsAffected == 0 {
 		log.Printf("No rows updated for fileId=%s,expectedStatus=%s, newStatus=%s", fileId, expectedStatus, newStatus)
 	}
 	return nil
@@ -152,7 +154,7 @@ func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId st
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			log.Println("Record not found $v", err)
-			return nil, err
+			return nil, domain.ErrorFileNotFound
 		}
 		return nil, err
 	}
@@ -202,6 +204,42 @@ func (r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string)
 		return nil, fmt.Errorf("iterating rows error %w", err)
 	}
 	return fileVersions, nil
+}
+
+func (r *PostgresFileRepository) GetFileVersion(ctx context.Context, fileId string, fileVersionNum string) (*domain.FileVersion, error) {
+	query := `SELECT 
+					id, 
+					file_id, 
+					version_num, 
+					file_hash, 
+					size, 
+					status, 
+					created_at 
+				FROM file_versions 
+				WHERE file_id = $1
+				AND version_num = $2`
+
+	row := r.db.QueryRowContext(ctx, query, fileId, fileVersionNum)
+
+	var fileVersion = domain.FileVersion{}
+	err := row.Scan(
+		&fileVersion.ID,
+		&fileVersion.FileId,
+		&fileVersion.VersionNum,
+		&fileVersion.FileHash,
+		&fileVersion.Size,
+		&fileVersion.Status,
+		&fileVersion.CreatedAt,
+	)
+
+	if err !=nil{
+		if errors.Is(err, sql.ErrNoRows){
+			return nil, domain.ErrorFileNotFound
+		}
+
+		return nil, err
+	}
+	return &fileVersion, nil
 }
 
 func (r *PostgresFileRepository) GetFiles(ctx context.Context, userId string) ([]*domain.File, error) {
@@ -337,7 +375,7 @@ func (r *PostgresFileRepository) ClaimFilesForDeletion(ctx context.Context, limi
 				where f.id = c.id
 				RETURNING f.*`
 
-	rows, err := transaction.QueryContext(ctx, query, domain.FileStatusDeleteRequested, limit,domain.FileStatusDeleting)
+	rows, err := transaction.QueryContext(ctx, query, domain.FileStatusDeleteRequested, limit, domain.FileStatusDeleting)
 	if err != nil {
 		return nil, err
 	}
@@ -417,9 +455,9 @@ func (r *PostgresFileRepository) MarkFileDeleted(ctx context.Context, fileID str
 	return nil
 }
 
-func (r *PostgresFileRepository) GetFileFileByOwnerIdNameAndStatus(ctx context.Context, ownerId string, fileName string, status string) (*domain.File, error){
+func (r *PostgresFileRepository) GetFileFileByOwnerIdNameAndStatus(ctx context.Context, ownerId string, fileName string, status string) (*domain.File, error) {
 
-query := `SELECT 
+	query := `SELECT 
 				id, 
 				owner_id, 
 				file_name, 
@@ -432,7 +470,7 @@ query := `SELECT
 			AND lifecycle_status = $3`
 
 	row := r.db.QueryRowContext(ctx, query, ownerId, fileName, status)
-	
+
 	var file domain.File
 	err := row.Scan(
 		&file.ID,

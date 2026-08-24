@@ -102,6 +102,7 @@ func main() {
 	http.HandleFunc("/files", handler.AuthInterceptor(fileHandler.ListFiles))
 	http.HandleFunc("/file", handler.AuthInterceptor(fileHandler.DeleteFile))
 	http.HandleFunc("/files/{fileId}/versions", handler.AuthInterceptor(fileHandler.ListFileVersions))
+	http.HandleFunc("/files/{fileId}/{fileVersion}/download",handler.AuthInterceptor(fileHandler.DownloadFileVersion))
 	//5. Create an HTTP server to server incoming requests
 	server := &http.Server{
 		Addr:    ":8081",

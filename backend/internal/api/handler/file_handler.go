@@ -115,6 +115,34 @@ func (this *FileHandler) DownloadFile(writer http.ResponseWriter, request *http.
 	http.Redirect(writer, request, downloadUrl, http.StatusFound)
 }
 
+func (this *FileHandler) DownloadFileVersion(writer http.ResponseWriter, request *http.Request) {
+	log.Println("Handling Download File Request")
+	//Make sure it is HTTP GET method
+	if request.Method != http.MethodGet {
+		http.Error(writer, domain.ErrorMethodNotAllowed.Error(), http.StatusMethodNotAllowed)
+		return
+	}
+
+	userId := request.Context().Value(UserIdKey).(string)
+	fileId := request.PathValue("fileId")
+	fileVersion := request.PathValue("fileVersion")
+
+	log.Printf("user id: %s - file id: %s - file version: %s", fileId, userId, fileVersion)
+
+	if fileId == "" || userId == "" || fileVersion == "" {
+		http.Error(writer, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	downloadUrl, err := this.service.InitiateDownloadVersion(request.Context(), userId, fileId, fileVersion)
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(writer, request, downloadUrl, http.StatusFound)
+}
+
 func (this *FileHandler) ListFiles(writer http.ResponseWriter, request *http.Request) {
 
 	if http.MethodGet != request.Method {
@@ -174,19 +202,19 @@ func (this *FileHandler) ListFileVersions(writer http.ResponseWriter, request *h
 	}
 
 	userId, ok := request.Context().Value(UserIdKey).(string)
-	if !ok || userId ==""{
-		http.Error(writer,domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
+	if !ok || userId == "" {
+		http.Error(writer, domain.ErrorUnauthorizedUser.Error(), http.StatusUnauthorized)
 		return
 	}
-	
+
 	fileId := request.PathValue("fileId")
-	fileVersions, err:=this.service.ListFileVersionsForUser(request.Context(), userId, fileId)
-	if err != nil{
+	fileVersions, err := this.service.ListFileVersionsForUser(request.Context(), userId, fileId)
+	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writer.Header().Set("Content-Type","application/json")
+	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 
 	json.NewEncoder(writer).Encode(fileVersions)

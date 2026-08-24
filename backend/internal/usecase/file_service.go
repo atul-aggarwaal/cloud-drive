@@ -20,11 +20,11 @@ type FileService struct {
 	fileShareRepo domain.FileShareRepository
 }
 
-//List all versions of a file for a user
-func (s *FileService) ListFileVersionsForUser(context context.Context, userId string, fileId string) ([]*domain.FileVersion, error){
+// List all versions of a file for a user
+func (s *FileService) ListFileVersionsForUser(context context.Context, userId string, fileId string) ([]*domain.FileVersion, error) {
 	file, err := s.repo.GetFileByID(context, fileId)
 	if err != nil {
-		return nil,fmt.Errorf("get file: %w", err)
+		return nil, fmt.Errorf("get file: %w", err)
 	}
 	if file.OwnerID != userId {
 		return nil, domain.ErrorPermissionDenied
@@ -202,4 +202,51 @@ func (s *FileService) RequestFileDeletion(ctx context.Context, userId string, fi
 		return fmt.Errorf("mark requested delete: %w", err)
 	}
 	return nil
+}
+
+func (s *FileService) InitiateDownloadVersion(ctx context.Context, userId string, fileId string, fileVersionNum string) (string, error) {
+	log.Println("Initiating download for file")
+
+	file, err := s.repo.GetFileByID(ctx, fileId)
+	if err != nil {
+		return "", fmt.Errorf("reteriving file: %v", err)
+	}
+	if file == nil {
+		return "", fmt.Errorf("fail to find file: %w", err)
+	}
+
+	// Only allow valid user to download file
+	// Validate file access, if user id doesn't match with owner id of file.
+	if userId != file.OwnerID {
+
+		isAccesible, err := s.fileShareRepo.HasAccess(ctx, fileId, userId)
+		if err != nil {
+			return "", fmt.Errorf("error validating file authorization %w", err)
+		}
+		if !isAccesible {
+			return "", fmt.Errorf("unauthorized access")
+		}
+	}
+
+	//Find file version now.
+	fileVersion, err := s.repo.GetFileVersion(ctx, fileId, fileVersionNum)
+	if err != nil {
+		return "", fmt.Errorf("reteriving file version: %v", err)
+	}
+	if fileVersion == nil {
+		return "", fmt.Errorf("failed to locate latest file version")
+	}
+
+	if fileVersion.Status != "AVAILABLE" {
+		return "", fmt.Errorf("file is not available for download")
+	}
+
+	objectKey := fmt.Sprintf("user/%s/%s/v%d", file.OwnerID, file.ID, fileVersion.VersionNum)
+	downloadUrl, err := s.storage.GenerateDownloadUrl(ctx, objectKey, 15*time.Minute)
+
+	if err != nil {
+		return "", fmt.Errorf("storage provider error: %w", err)
+	}
+
+	return downloadUrl, nil
 }
