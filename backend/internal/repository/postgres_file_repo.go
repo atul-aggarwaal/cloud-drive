@@ -206,7 +206,7 @@ func (r *PostgresFileRepository) GetVersions(ctx context.Context, fileID string)
 	return fileVersions, nil
 }
 
-func (r *PostgresFileRepository) GetFileVersion(ctx context.Context, fileId string, fileVersionNum string) (*domain.FileVersion, error) {
+func (r *PostgresFileRepository) GetFileVersion(ctx context.Context, fileId string, fileVersionNum int) (*domain.FileVersion, error) {
 	query := `SELECT 
 					id, 
 					file_id, 

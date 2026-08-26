@@ -115,20 +115,13 @@ func (s *FileService) InitiateDownload(ctx context.Context, fileId string, userI
 	log.Println("Initiating download for file")
 
 	file, err := s.repo.GetFileByID(ctx, fileId)
-	fileVersion, err2 := s.repo.GetLatestVersion(ctx, fileId)
-
 	if err != nil {
 		return "", fmt.Errorf("fail to find file: %v", err)
 	}
+
+	fileVersion, err2 := s.repo.GetLatestVersion(ctx, fileId)
 	if err2 != nil {
 		return "", fmt.Errorf("fail to find file version: %v", err2)
-	}
-
-	if file == nil {
-		return "", fmt.Errorf("file is null, fail to find file")
-	}
-	if fileVersion == nil {
-		return "", fmt.Errorf("failed to locate latest file version")
 	}
 
 	// Only allow valid user to download file
@@ -204,15 +197,12 @@ func (s *FileService) RequestFileDeletion(ctx context.Context, userId string, fi
 	return nil
 }
 
-func (s *FileService) InitiateDownloadVersion(ctx context.Context, userId string, fileId string, fileVersionNum string) (string, error) {
+func (s *FileService) InitiateDownloadVersion(ctx context.Context, userId string, fileId string, fileVersionNum int) (string, error) {
 	log.Println("Initiating download for file")
 
 	file, err := s.repo.GetFileByID(ctx, fileId)
 	if err != nil {
 		return "", fmt.Errorf("reteriving file: %v", err)
-	}
-	if file == nil {
-		return "", fmt.Errorf("fail to find file: %w", err)
 	}
 
 	// Only allow valid user to download file
@@ -232,9 +222,6 @@ func (s *FileService) InitiateDownloadVersion(ctx context.Context, userId string
 	fileVersion, err := s.repo.GetFileVersion(ctx, fileId, fileVersionNum)
 	if err != nil {
 		return "", fmt.Errorf("reteriving file version: %v", err)
-	}
-	if fileVersion == nil {
-		return "", fmt.Errorf("failed to locate latest file version")
 	}
 
 	if fileVersion.Status != "AVAILABLE" {

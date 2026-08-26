@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/atul-aggarwaal/cloud-drive/internal/domain"
 	"github.com/atul-aggarwaal/cloud-drive/internal/usecase"
@@ -125,11 +126,15 @@ func (this *FileHandler) DownloadFileVersion(writer http.ResponseWriter, request
 
 	userId := request.Context().Value(UserIdKey).(string)
 	fileId := request.PathValue("fileId")
-	fileVersion := request.PathValue("fileVersion")
+	fileVersion,err := strconv.Atoi(request.PathValue("fileVersion"))
+	if err!=nil{
+		http.Error(writer, "Invalid version number", http.StatusBadRequest)
+		return
+	}
 
 	log.Printf("user id: %s - file id: %s - file version: %s", fileId, userId, fileVersion)
 
-	if fileId == "" || userId == "" || fileVersion == "" {
+	if fileId == "" || userId == "" {
 		http.Error(writer, "Invalid request", http.StatusBadRequest)
 		return
 	}
