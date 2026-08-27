@@ -145,7 +145,20 @@ func (r *PostgresFileRepository) GetFileByID(ctx context.Context, id string) (*d
 
 // GetLatestVersion retrieves the latest file version record by its ID.
 func (r *PostgresFileRepository) GetLatestVersion(ctx context.Context, fileId string) (*domain.FileVersion, error) {
-	query := `SELECT id, file_id, version_num, file_hash, size, status, created_at FROM file_versions WHERE file_id =$1 ORDER BY id DESC LIMIT 1`
+	query := `SELECT 
+					id, 
+					file_id, 
+					version_num, 
+					file_hash, 
+					size, 
+					status, 
+					created_at 
+				FROM 
+					file_versions 
+				WHERE 
+					file_id =$1 
+				ORDER BY version_num 
+				DESC LIMIT 1`
 	row := r.db.QueryRowContext(ctx, query, fileId)
 
 	var fileVersion domain.FileVersion
